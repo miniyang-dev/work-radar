@@ -1,0 +1,14 @@
+{% if error %}
+<p class="empty">留言載入失敗:{{ error }}</p>
+{% elif comments %}
+<div class="comment-list">
+  {% for comment in comments %}
+  <div class="comment">
+    <div class="comment-meta"><strong>{{ comment.author }}</strong><span>{{ comment.created_at }}</span></div>
+    <div class="comment-body">{{ comment.body }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">沒有留言。</p>
+{% endif %}

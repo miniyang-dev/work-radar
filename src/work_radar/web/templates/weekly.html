@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}個人週報 - work-radar{% endblock %}
+{% block content %}
+<div class="board">
+  <form method="get" action="/weekly" class="query-form">
+    {{ macros.member_picker(members, account_id) }}
+    <input type="text" name="name" placeholder="姓名(可部分比對),例如 Alice" value="{{ name }}">
+    <input type="number" name="window_days" value="{{ window_days }}" min="1">
+    <button type="submit">查詢</button>
+  </form>
+</div>
+
+{% if report %}
+<div class="board">
+  <div class="person-cell" style="margin-bottom: 0.5rem;">
+    <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 36px; height: 36px; font-size: 0.85rem;">{{ report.person.avatar.initials }}</span>
+    <span class="board-title" style="margin: 0;">{{ report.person.display_name }}</span>
+  </div>
+  <div class="board-subtitle">最近 {{ report.window_days }} 天</div>
+
+  {{ macros.issue_group("完成", "#00c875", report.completed) }}
+  {{ macros.issue_group("進行中", "#0073ea", report.in_progress) }}
+  {{ macros.issue_group("待處理", "#e2445c", report.stuck) }}
+</div>
+{% endif %}
+{% endblock %}

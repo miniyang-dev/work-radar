@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}個人工作量 - work-radar{% endblock %}
+{% block content %}
+{% if reports is defined %}
+  {% if reports %}
+  <div class="workload-layout">
+    <div class="workload-main">
+      {% for report in reports %}
+      <div class="board" id="member-{{ report.person.account_id }}">
+        <div class="member-header">
+          <div class="person-cell">
+            <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 36px; height: 36px; font-size: 0.85rem;">{{ report.person.avatar.initials }}</span>
+            <span class="board-title" style="margin: 0;">{{ report.person.display_name }}</span>
+          </div>
+          <button type="button" class="collapse-toggle" onclick="workRadarToggleMember(this)">收合</button>
+        </div>
+        <div class="member-body">
+          <div class="board-subtitle">共 {{ report.issue_count }} 張未完成 ticket</div>
+
+          {% if report.allocation_by_project %}
+          <div class="stat-row">
+            {% for project, percentage in report.allocation_by_project %}
+            <span class="stat-pill"><b>{{ percentage }}%</b> {{ project }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {# Top of the member's body, above even the finished work: it is
+             the only thing here Jira knows nothing about, so if it doesn't
+             lead it gets lost among 30 tickets. Hidden when empty — an
+             exception block, not a standing section. #}
+          {% if report.unticketed_count %}
+          {{ macros.tracking_group("重要但尚未開票", "#e2445c", report.unticketed_items) }}
+          {% endif %}
+
+          {# Outside the issue_count check below: someone can finish
+             everything they had open and still deserve credit for it. #}
+          {{ macros.issue_group("本週已完成(依完成時間排序)", "#a25ddc", report.completed_issues, show_completed_at=True) }}
+
+          {% if report.issue_count %}
+          {{ macros.issue_group("進行中(依到期日排序)", "#00c875", report.active_issues, show_due_date=True) }}
+
+          {% if report.backlog_groups_by_project %}
+          <details class="backlog-section">
+            <summary>庫存區({{ report.backlog_count }})</summary>
+            {% for group in report.backlog_groups_by_project %}
+            {# Dated backlog rows are flagged: nothing here has been started,
+               so a date on one is a commitment already running down. #}
+            {{ macros.issue_group(group.project_key, group.accent, group.issues, show_due_date=True, highlight_due_date=True) }}
+            {% endfor %}
+          </details>
+          {% endif %}
+          {% else %}
+          <p class="empty">沒有未完成 ticket。</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <aside class="workload-gantt">
+      <div class="board">
+        <div class="board-title">工作甘特圖</div>
+        <div class="board-subtitle">上週到未來兩週,依成員分組,直線=今天;綠色=本週已完成(起始日到完成日),其餘為進行中(起始日到到期日);紅色=已逾期,虛線=無到期日,箭頭=到期日超過兩週</div>
+
+        {% if gantt.groups %}
+        <div class="gantt-chart">
+          <div class="gantt-axis">
+            <span class="gantt-axis-gutter"></span>
+            <span class="gantt-axis-scale">
+              <span class="gantt-axis-start">{{ gantt.window_start }}</span>
+              <span class="gantt-axis-end">{{ gantt.window_end }}</span>
+            </span>
+          </div>
+          {% for group in gantt.groups %}
+          <div class="gantt-group">
+            <div class="gantt-group-title">
+              <span class="avatar" style="background: {{ group.avatar.color }}; width: 18px; height: 18px; font-size: 0.6rem;">{{ group.avatar.initials }}</span>
+              {{ group.member }}
+            </div>
+            {% for row in group.rows %}
+            <div class="gantt-row">
+              <div class="gantt-label">
+                <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer" title="{{ row.summary }}">{{ row.key }}</a>
+              </div>
+              <div class="gantt-track">
+                <div class="gantt-today" style="left: {{ gantt.today_pct }}%;" title="今天 {{ gantt.today }}"></div>
+                <div class="gantt-bar {{ row.status }}" style="left: {{ row.left_pct }}%; width: {{ row.width_pct }}%;"
+                     title="{{ row.summary }}（{{ row.date_label }}）"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty">目前沒有進行中的項目。</p>
+        {% endif %}
+      </div>
+
+      <div class="board">
+        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+          <button type="button" class="collapse-toggle" onclick="workRadarToggleNote(this)">戰略方向設定</button>
+          <button type="button" class="collapse-toggle" onclick="workRadarToggleOverview(this)">產生本週進度總覽</button>
+        </div>
+
+        <div id="note-panel" hidden style="margin-top: 0.8rem;">
+          <div class="board-subtitle" style="margin: 0 0 0.5rem;">這裡存的內容,每次「產生本週進度總覽」都會自動放在最上方。</div>
+          <form method="post" action="/workload/overview-note">
+            <textarea name="content" class="overview-textarea" rows="6">{{ overview_note }}</textarea>
+            <div style="margin-top: 0.6rem;">
+              <button type="submit">儲存</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="overview-panel" hidden style="margin-top: 0.8rem;">
+          <div class="board-subtitle" style="margin: 0 0 0.5rem;">依成員分組,專案排序依 OVERVIEW_PROJECT_RANK 設定,未列入的排在後面,同專案再依到期日排序。每張票自動帶「人力/完成日」(沒設到期日就不帶),實際狀態說明請自行補在後面,填完直接複製貼上。</div>
+          <textarea id="overview-textarea" class="overview-textarea" rows="18">{{ overview_markdown }}</textarea>
+          <div style="margin-top: 0.6rem;">
+            <button type="button" onclick="workRadarCopyOverview()">複製</button>
+            <span id="overview-copy-status" class="board-subtitle" style="display: inline; margin-left: 0.6rem;"></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    function workRadarToggleMember(button) {
+      var body = button.closest('.board').querySelector('.member-body');
+      var collapsed = body.classList.toggle('collapsed');
+      button.textContent = collapsed ? '展開' : '收合';
+    }
+
+    function workRadarToggleNote(button) {
+      var panel = document.getElementById('note-panel');
+      panel.hidden = !panel.hidden;
+      button.textContent = panel.hidden ? '戰略方向設定' : '收合';
+    }
+
+    function workRadarToggleOverview(button) {
+      var panel = document.getElementById('overview-panel');
+      panel.hidden = !panel.hidden;
+      button.textContent = panel.hidden ? '產生本週進度總覽' : '收合';
+    }
+
+    function workRadarCopyOverview() {
+      var textarea = document.getElementById('overview-textarea');
+      var status = document.getElementById('overview-copy-status');
+      textarea.select();
+      var done = function () { status.textContent = '已複製!'; };
+      var fail = function () {
+        document.execCommand('copy');
+        done();
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value).then(done, fail);
+      } else {
+        fail();
+      }
+    }
+  </script>
+  {% else %}
+  <div class="board">
+    <p class="empty">成員名單是空的,先到<a href="/members">成員管理</a>加入要追蹤的人。</p>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}單號查詢 - work-radar{% endblock %}
+{% block content %}
+<div class="board">
+  <form method="get" action="/epic" class="query-form">
+    <input type="text" name="key" placeholder="單號,例如 ABC-123" value="{{ key }}">
+    <button type="submit">查詢</button>
+  </form>
+</div>
+
+{% if report %}
+<div class="board">
+  <div class="board-title"><a href="{{ report.epic.url }}" target="_blank" rel="noopener noreferrer">{{ report.epic.key }}</a>: {{ report.epic.summary }}</div>
+  <div class="meta-line">
+    <span>狀態:<span class="status-pill {{ report.epic.status_css }}">{{ report.epic.status }}</span></span>
+    <span>負責人:<strong>{{ report.epic.assignee }}</strong></span>
+    <span>優先級:<span class="priority-tag">{{ report.epic.priority }}</span></span>
+  </div>
+
+  <div class="stat-row">
+    {% for status, count in report.status_counts %}
+    <span class="stat-pill"><b>{{ count }}</b> {{ status }}</span>
+    {% endfor %}
+  </div>
+
+  {{ macros.issue_group("子任務", "#0073ea", report.children) }}
+</div>
+{% endif %}
+{% endblock %}

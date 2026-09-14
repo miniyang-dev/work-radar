@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}追蹤事項 - work-radar{% endblock %}
+
+{# Macros don't see the template context, so every option list has to be
+   passed in explicitly on each call. #}
+{% macro tracking_form(action, status_options, priority_options, members, row=None, submit_label="新增") %}
+<form method="post" action="{{ action }}" class="tracking-form">
+  <label class="wide">工作項目
+    <input type="text" name="item" required placeholder="要跟進什麼?" value="{{ row.item if row else '' }}">
+  </label>
+  <label>狀態
+    <select name="status">
+      {% for option in status_options %}
+      <option value="{{ option.value }}" {{ 'selected' if row and row.status_value == option.value }}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>負責人 / 對象
+    <input type="text" name="owner" list="tracking-owners" placeholder="可從名單選,或直接輸入" value="{{ row.owner if row else '' }}">
+  </label>
+  {# Separate from 負責人 above on purpose: that one is free text (often
+     someone outside the team), this one has to be a roster member for the
+     item to reach their 個人工作量 page. Blank = don't surface it there. #}
+  <label>顯示在個人工作量
+    <select name="member_account_id">
+      <option value="">— 不顯示 —</option>
+      {% for member in members %}
+      <option value="{{ member.account_id }}" {{ 'selected' if row and row.member_account_id == member.account_id }}>{{ member.display_name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>優先度
+    <select name="priority">
+      {% for option in priority_options %}
+      <option value="{{ option.value }}" {{ 'selected' if option.value == (row.priority_value if row else 'medium') }}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>追蹤日期
+    <input type="date" name="due_date" value="{{ row.due_date if row else '' }}">
+  </label>
+  <label>連結
+    <input type="url" name="link" placeholder="https://..." value="{{ (row.link or '') if row else '' }}">
+  </label>
+  {# Append-only: the field always posts empty, so an edit that doesn't
+     touch 備註 leaves the log alone. The existing entries are shown above
+     it (read-only) so whoever is typing can see what's already there. #}
+  <label class="wide">備註
+    {% if row and row.notes %}
+    <div class="note-log">
+      {% for note in row.notes %}
+      <div class="note-entry"><span class="note-time">{{ note.created_at }}</span>{% for part in note.segments %}{% if part.url %}<a class="note-link" href="{{ part.url }}" target="_blank" rel="noopener noreferrer" title="{{ part.url }}">{{ part.text }}</a>{% else %}{{ part.text }}{% endif %}{% endfor %}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <textarea name="note" rows="2" placeholder="{{ '新增備註(儲存時自動壓上時間,舊的不會被蓋掉)' if row else '補充說明' }}"></textarea>
+  </label>
+  <div class="tracking-submit"><button type="submit">{{ submit_label }}</button></div>
+</form>
+{% endmacro %}
+
+{% macro tracking_rows(items, status_options, priority_options) %}
+<div class="table-scroll">
+  <table class="board-table">
+    <thead>
+      <tr>
+        <th>工作項目</th>
+        <th>負責人</th>
+        <th>狀態</th>
+        <th>優先度</th>
+        <th>追蹤日期</th>
+        <th>最後更新</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in items %}
+      <tr>
+        <td class="item-cell">
+          {% if row.link %}
+          <a class="item-link" href="{{ row.link }}" target="_blank" rel="noopener noreferrer">{{ row.item }} 🔗</a>
+          {% else %}
+          {{ row.item }}
+          {% endif %}
+          {% if row.member_name %}
+          <span class="routed-pill" title="也顯示在 {{ row.member_name }} 的個人工作量">▸ 個人工作量:{{ row.member_name }}</span>
+          {% endif %}
+          {% for note in row.notes %}
+          <span class="item-note"><span class="note-time">{{ note.created_at }}</span>{% for part in note.segments %}{% if part.url %}<a class="note-link" href="{{ part.url }}" target="_blank" rel="noopener noreferrer" title="{{ part.url }}">{{ part.text }}</a>{% else %}{{ part.text }}{% endif %}{% endfor %}</span>
+          {% endfor %}
+        </td>
+        <td class="owner-cell">
+          {% if row.owner %}
+          <span class="person-cell">
+            <span class="avatar" style="background: {{ row.owner_avatar.color }};">{{ row.owner_avatar.initials }}</span>
+            <span class="name">{{ row.owner }}</span>
+          </span>
+          {% else %}
+          <span class="unassigned-pill">未指定</span>
+          {% endif %}
+        </td>
+        <td><span class="status-pill {{ row.status_css }}">{{ row.status_label }}</span></td>
+        <td><span class="priority-tag {{ row.priority_css }}">{{ row.priority_label }}</span></td>
+        <td class="{{ 'overdue-text' if row.is_overdue }}">
+          {% if row.due_date %}{{ row.due_date }}{% if row.is_overdue %} (已逾期){% endif %}{% else %}—{% endif %}
+        </td>
+        <td>{{ row.updated_at }}</td>
+        <td>
+          <div class="tracking-actions">
+            {# Reopening lands on 待處理 rather than whatever it was before
+               closing: the earlier status is exactly the thing that stopped
+               being true, and the edit form below is right there for
+               anything more specific. #}
+            <form method="post" action="/tracking/{{ row.id }}/status">
+              {% if row.is_active %}
+              <input type="hidden" name="status" value="done">
+              <button type="submit" class="small">✓ 完成</button>
+              {% else %}
+              <input type="hidden" name="status" value="todo">
+              <button type="submit" class="small">↩ 重新追蹤</button>
+              {% endif %}
+            </form>
+            <button type="button" class="collapse-toggle" onclick="workRadarToggleTrackingEdit(this)">編輯</button>
+            {# The confirm message is a fixed string on purpose: interpolating
+               free-typed text into a JS literal breaks on an apostrophe. #}
+            <form method="post" action="/tracking/{{ row.id }}/delete" onsubmit="return confirm('確定要刪除這筆追蹤事項嗎?');">
+              <button type="submit" class="small danger">刪除</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      <tr class="tracking-edit-row" hidden>
+        <td colspan="7">
+          {{ tracking_form('/tracking/' ~ row.id ~ '/update', status_options, priority_options, members, row=row, submit_label='儲存') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% block content %}
+{# One datalist for the whole page — ids must be unique, and every owner
+   field (the add form plus each row's edit form) shares this one. #}
+<datalist id="tracking-owners">
+  {% for member in members %}<option value="{{ member.display_name }}">{% endfor %}
+</datalist>
+
+<div class="board">
+  <div class="board-title">新增追蹤事項</div>
+  <div class="board-subtitle">手動記錄要跟進的事情 —— 會議上答應的東西、在等誰回覆的決策。跟 Jira 無關,連結欄想放什麼都行</div>
+  {% if not members %}
+  <div class="board-subtitle">成員名單是空的(或還沒設定),負責人直接輸入姓名即可</div>
+  {% endif %}
+  {{ tracking_form('/tracking/add', status_options, priority_options, members) }}
+</div>
+
+{% if tracking %}
+<div class="board">
+  <div class="board-title">追蹤中({{ tracking.counts.active }})</div>
+  <div class="board-subtitle">依追蹤日期排序,逾期的自然排在最上面;沒填日期的排在最後</div>
+
+  <div class="stat-row">
+    <div class="stat-pill">追蹤中 <b>{{ tracking.counts.active }}</b></div>
+    <div class="stat-pill">逾期 <b>{{ tracking.counts.overdue }}</b></div>
+    <div class="stat-pill">等待回覆 <b>{{ tracking.counts.waiting }}</b></div>
+    <div class="stat-pill">已結案 <b>{{ tracking.counts.closed }}</b></div>
+  </div>
+
+  {% if tracking.active %}
+  {{ tracking_rows(tracking.active, status_options, priority_options) }}
+  {% else %}
+  <p class="empty">目前沒有要追蹤的事項,在上方新增吧。</p>
+  {% endif %}
+
+  {% if tracking.closed %}
+  <details class="backlog-section">
+    <summary>已完成 / 已擱置({{ tracking.counts.closed }})</summary>
+    {{ tracking_rows(tracking.closed, status_options, priority_options) }}
+  </details>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+  // Same shape as the comments toggle in base.html: the edit form lives in
+  // a hidden sibling <tr>, so nothing needs to be fetched or re-rendered.
+  function workRadarToggleTrackingEdit(button) {
+    var row = button.closest('tr').nextElementSibling;
+    row.hidden = !row.hidden;
+    button.textContent = row.hidden ? '編輯' : '取消';
+  }
+</script>
+{% endblock %}

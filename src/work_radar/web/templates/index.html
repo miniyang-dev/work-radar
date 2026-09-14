@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}work-radar{% endblock %}
+{% block content %}
+<div class="board">
+  <p style="color: var(--text-muted); margin-top: 0;">掃描 Jira,找出待處理太久或工作量爆棚的項目。</p>
+  <ul class="link-list">
+    <li><a href="/workload">個人工作量</a> <span>— 成員名單裡每個人所有未完成的 ticket,依成員分組</span></li>
+    <li><a href="/tracking">追蹤事項</a> <span>— 手動記錄要跟進的事項,自己新增/編輯/結案,不需要 Jira</span></li>
+    <li><a href="/risk">團隊風險</a> <span>— 成員名單裡每個人的逾期、待處理票</span></li>
+    <li><a href="/audit">專案盤查</a> <span>— 指定專案近 3 個月/半年/一年開的單,依綜合緊急度排序,含統計與缺漏盤查</span></li>
+    <li><a href="/weekly">個人週報</a> <span>— 某人這週完成/進行中/待處理的票</span></li>
+    <li><a href="/epic">單號查詢</a> <span>— 查一個單號目前狀態與子任務進度</span></li>
+    <li><a href="/members">成員管理</a> <span>— 搜尋並新增/改名/移除追蹤名單,其他頁面可直接下拉選擇,不用打名字</span></li>
+  </ul>
+</div>
+{% endblock %}

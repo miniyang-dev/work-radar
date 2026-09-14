@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}團隊風險 - work-radar{% endblock %}
+{% block content %}
+<div class="board">
+  <form method="get" action="/risk" class="query-form">
+    <label class="board-subtitle" style="margin: 0;">待處理門檻(天):</label>
+    <input type="number" name="stale_days" value="{{ stale_days }}" min="1" onchange="this.form.requestSubmit()">
+  </form>
+  <div class="board-subtitle" style="margin: 0.6rem 0 0;">
+    {% if member_names %}
+    只看成員名單裡的人:{{ member_names|join(', ') }}
+    {% else %}
+    成員名單是空的,先到<a href="/members">成員管理</a>加入要追蹤的人。
+    {% endif %}
+  </div>
+</div>
+
+{% if report %}
+<div class="board">
+  <div class="board-title">團隊風險掃描</div>
+  <div class="board-subtitle">只計算上方名單裡這些人的票</div>
+
+  {{ macros.issue_group("逾期", "#e2445c", report.overdue, show_due_date=True, highlight_due_date=True) }}
+
+  <div class="group" style="--accent: #fdab3d;">
+    <div class="group-title">無人認領（{{ report.unassigned|length }}）</div>
+    <p class="empty">只看成員名單的票時,這裡一定是 0——無人認領的票不可能屬於任何一個成員。想看整個專案有哪些票沒人領,之後可以再加一個「依專案」的版本。</p>
+  </div>
+
+  {{ macros.issue_group("待處理超過 " + stale_days|string + " 天", "#a25ddc", report.stale) }}
+</div>
+{% endif %}
+{% endblock %}

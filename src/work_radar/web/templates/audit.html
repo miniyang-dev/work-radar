@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}專案盤查 - work-radar{% endblock %}
+{% block content %}
+<div class="board">
+  <form method="get" action="/audit" class="query-form">
+    <label class="board-subtitle" style="margin: 0;">期間(依建立日):</label>
+    <select name="window_days" onchange="this.form.requestSubmit()">
+      {% for days, label in window_choices %}
+      <option value="{{ days }}" {{ 'selected' if days == window_days else '' }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label class="board-subtitle" style="margin: 0;">待處理門檻(天):</label>
+    <input type="number" name="stale_days" value="{{ stale_days }}" min="1" onchange="this.form.requestSubmit()">
+    <label class="board-subtitle" style="margin: 0;">檢視:</label>
+    <select name="group_by" onchange="this.form.requestSubmit()">
+      {% for option in group_by_options %}
+      <option value="{{ option.value }}" {{ 'selected' if option.value == group_by else '' }}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div class="board-subtitle" style="margin: 0.6rem 0 0;">
+    盤查 {{ project_label }} 專案在這段期間<b>新開</b>的所有單(含已完成)。緊急度是綜合分數:逾期天數 &gt; 優先級 &gt; 停滯天數 &gt; 無人認領。
+    到期日欄位沒填就排不進任何報表——甘特圖只能畫成虛線,週報總覽也不會帶出「人力/完成日」。
+  </div>
+</div>
+
+{% if audit %}
+<div class="board">
+  <div class="board-title">{{ audit.project_label }} 盤查總覽</div>
+  <div class="board-subtitle">近 {{ audit.window_days }} 天新開的單</div>
+  <div class="stat-row">
+    <span class="stat-pill"><b>{{ audit.stats.total }}</b> 期間總數</span>
+    <span class="stat-pill"><b>{{ audit.stats.open_count }}</b> 未完成</span>
+    <span class="stat-pill"><b>{{ audit.stats.done_count }}</b> 已完成({{ audit.stats.done_rate }}%)</span>
+    <span class="stat-pill {{ 'alert' if audit.stats.overdue_count }}"><b>{{ audit.stats.overdue_count }}</b> 逾期</span>
+    <span class="stat-pill {{ 'alert' if audit.stats.high_priority_count }}"><b>{{ audit.stats.high_priority_count }}</b> P0/P1</span>
+    <span class="stat-pill {{ 'alert' if audit.stats.unassigned_count }}"><b>{{ audit.stats.unassigned_count }}</b> 無人認領</span>
+    <span class="stat-pill"><b>{{ audit.stats.no_due_date_count }}</b> 無到期日</span>
+    <span class="stat-pill {{ 'alert' if audit.stats.stale_count }}"><b>{{ audit.stats.stale_count }}</b> 超過 {{ audit.stats.stale_days }} 天沒更新</span>
+    <span class="stat-pill"><b>{{ audit.stats.median_stale_days }}</b> 天未更新中位數</span>
+  </div>
+</div>
+
+<div class="board">
+  <div class="board-title">未完成單(依緊急度排序,{{ audit.stats.open_count }})</div>
+  {% if audit.groups %}
+    {% for group in audit.groups %}
+      {% if group.title %}
+      <div class="group" style="--accent: {{ group.accent }};">
+        <div class="group-title">
+          {% if group.avatar %}
+          <span class="avatar" style="background: {{ group.avatar.color }}; width: 20px; height: 20px; font-size: 0.62rem;">{{ group.avatar.initials }}</span>
+          {% endif %}
+          {{ group.title }}（{{ group.rows|length }}）
+        </div>
+        {{ macros.audit_table(group.rows) }}
+      </div>
+      {% else %}
+      {{ macros.audit_table(group.rows) }}
+      {% endif %}
+    {% endfor %}
+  {% else %}
+  <p class="empty">這段期間開的單都完成了。</p>
+  {% endif %}
+</div>
+
+{% if audit.done %}
+<div class="board">
+  <details class="backlog-section">
+    <summary>已完成({{ audit.done|length }})</summary>
+    {{ macros.issue_group("期間內已完成", "#00c875", audit.done, show_due_date=True) }}
+  </details>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
