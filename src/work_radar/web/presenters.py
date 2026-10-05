@@ -8,6 +8,7 @@ application layer stays free to change shape without breaking a template.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
@@ -17,7 +18,7 @@ from work_radar.application.epic_report import EpicReport
 from work_radar.application.project_audit import AuditEntry, ProjectAuditReport
 from work_radar.application.risk_scan import TeamRiskReport
 from work_radar.application.weekly_report import WeeklyReport
-from work_radar.application.workload_report import WorkloadReport
+from work_radar.application.workload_report import WorkloadReport, is_reviewing
 from work_radar.domain.models import (
     Comment,
     Issue,
@@ -93,6 +94,15 @@ def _due_state(due_date: Optional[date]) -> str:
     return "overdue" if due_date < date.today() else "scheduled"
 
 
+def _status_css(issue: Issue) -> str:
+    # Reviewing shares Running's Jira category (in progress), so the
+    # category alone paints both the same orange; review gets its own colour
+    # because it means "waiting on someone else", not "being worked".
+    if is_reviewing(issue):
+        return "status-review"
+    return _STATUS_CSS_CLASS.get(issue.status.category, "status-todo")
+
+
 def issue_row(issue: Issue) -> Dict[str, Any]:
     assignee_name = issue.assignee.display_name if issue.assignee else None
     due_state = _due_state(issue.due_date)
@@ -101,7 +111,7 @@ def issue_row(issue: Issue) -> Dict[str, Any]:
         "url": _issue_url(issue.key),
         "summary": issue.summary,
         "status": issue.status.name,
-        "status_css": _STATUS_CSS_CLASS.get(issue.status.category, "status-todo"),
+        "status_css": _status_css(issue),
         "assignee": assignee_name or "(unassigned)",
         "assignee_avatar": _avatar(assignee_name) if assignee_name else None,
         "priority": issue.priority or "N/A",
@@ -199,47 +209,172 @@ def _overview_project_rank(project_key: str) -> tuple:
     return (table.get(project_key, len(table)), project_key)
 
 
-def weekly_overview_markdown(reports: List[WorkloadReport], intro: str = "") -> str:
-    """Drafts the weekly "Ongoing Project" status update: one section per
-    member, that member's active (Running/Reviewing) tickets ranked by
-    project (the OVERVIEW_PROJECT_RANK order, everything else after) then
-    by due date.
+# The label that marks a ticket as internal work with no outside requester.
+# It stands in for the priority on that ticket's line, and sorts last within
+# its project.
+INTERNAL_TASK_LABEL = "內部任務"
 
-    Each ticket with a due date gets an auto-filled "人力:N天,完成日:..."
-    line (N = days between created_at and due_date); issues with no due
-    date get no such line at all — there's nothing honest to compute, so
-    it's left fully blank rather than filled with a placeholder. The real
-    status write-up ("優先處理 => ...") is left for a human to type in
-    after, since that's a judgment call Jira has no field for.
+# Jira priority name -> (sort rank, text for the status line). Two schemes
+# coexist on this Jira instance (see application/project_audit.py): the
+# P0..P3 one the tracked projects use and the stock Highest..Lowest one, and
+# they line up level for level. An unlisted name is shown as-is and sorts
+# after everything known.
+_PRIORITY_DISPLAY = {
+    "P0": (0, "最高"),
+    "Highest": (0, "最高"),
+    "P1": (1, "高"),
+    "High": (1, "高"),
+    "P2": (2, "中"),
+    "Medium": (2, "中"),
+    "P3": (3, "低"),
+    "Low": (3, "低"),
+    "Lowest": (3, "低"),
+}
+_UNKNOWN_PRIORITY_RANK = max(rank for rank, _ in _PRIORITY_DISPLAY.values()) + 1
+
+
+def _priority_rank(priority: Optional[str]) -> int:
+    return _PRIORITY_DISPLAY.get(priority or "", (_UNKNOWN_PRIORITY_RANK, ""))[0]
+
+
+def _overview_sort_key(issue: Issue) -> tuple:
+    return (
+        _overview_project_rank(issue.project_key),
+        INTERNAL_TASK_LABEL in issue.labels,
+        _priority_rank(issue.priority),
+        issue.due_date or date.max,
+    )
+
+
+def _overview_auto_text(issue: Issue) -> str:
+    """The part of a ticket's status line that Jira supplies."""
+    if INTERNAL_TASK_LABEL in issue.labels:
+        return INTERNAL_TASK_LABEL
+    if not issue.priority:
+        return ""
+    label = _PRIORITY_DISPLAY.get(issue.priority, (0, issue.priority))[1]
+    return f"優先權:{label}"
+
+
+def _overview_issues(report: WorkloadReport) -> List[Issue]:
+    """Tickets already in review are out of the assignee's hands, so the
+    status update leaves them out.
+    """
+    return [issue for issue in report.active_issues if not is_reviewing(issue)]
+
+
+def _overview_reports(reports: List[WorkloadReport]) -> List[WorkloadReport]:
+    return [report for report in reports if report.person.in_overview and _overview_issues(report)]
+
+
+def weekly_overview_markdown(
+    reports: List[WorkloadReport],
+    intro: str = "",
+    issue_notes: Optional[Dict[str, str]] = None,
+) -> str:
+    """Drafts the weekly "Ongoing Project" status update: one section per
+    member, that member's Running tickets (Reviewing ones are left out)
+    ranked by
+    project (the OVERVIEW_PROJECT_RANK order, everything else after), then
+    Jira priority, then due date. Internal tasks (the 內部任務 label) sit
+    after the rest of their project.
+
+    Each ticket gets one status line: the parts Jira knows ("優先權:高", or
+    "內部任務" for labelled tickets) followed by whatever was last saved for
+    that ticket in `issue_notes` (see parse_overview_edits). Members who
+    opted out of the overview (Person.in_overview) are skipped.
 
     `intro` is arbitrary saved text (e.g. a standing strategy note) that,
     when present, is pasted in verbatim above the "Ongoing Project" list.
     """
+    notes = issue_notes or {}
     lines: List[str] = []
     if intro.strip():
         lines.append(intro.strip())
         lines.append("")
 
-    lines.append("Ongoing Project")
+    lines.append(_OVERVIEW_HEADING)
 
-    for report in reports:
-        if not report.active_issues:
-            continue
-
-        ordered = sorted(
-            report.active_issues,
-            key=lambda issue: (_overview_project_rank(issue.project_key), issue.due_date or date.max),
-        )
-
+    for report in _overview_reports(reports):
         lines.append(report.person.display_name)
-        for issue in ordered:
+        for issue in sorted(_overview_issues(report), key=_overview_sort_key):
             lines.append(f"- {_issue_url(issue.key)}")
-            if issue.due_date:
-                days = (issue.due_date - issue.created_at.date()).days
-                lines.append(f"   - 人力:{days}天,完成日:{issue.due_date.isoformat()}")
+            first, *rest = notes.get(issue.key, "").split("\n")
+            head = ", ".join(part for part in (_overview_auto_text(issue), first.strip()) if part)
+            if head:
+                lines.append(f"  - {head}")
+            lines.extend(rest)
         lines.append("")
 
     return "\n".join(lines)
+
+
+def weekly_overview_view(
+    reports: List[WorkloadReport],
+    intro: str = "",
+    issue_notes: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    notes = issue_notes or {}
+    return {
+        "markdown": weekly_overview_markdown(reports, intro=intro, issue_notes=notes),
+        # So the page can say how many lines were carried over from a
+        # previous week and are worth a second look.
+        "carried_count": sum(
+            1
+            for report in _overview_reports(reports)
+            for issue in _overview_issues(report)
+            if notes.get(issue.key, "").strip()
+        ),
+    }
+
+
+_OVERVIEW_HEADING = "Ongoing Project"
+_ISSUE_LINK_LINE = re.compile(r"^-\s+\S*/browse/([A-Z][A-Z0-9_]*-\d+)\s*$")
+_BULLET_PREFIX = re.compile(r"^[-*•]\s*")
+# What weekly_overview_markdown puts at the front of a status line itself,
+# so it can be told apart from what a person typed after it.
+_AUTO_TEXT_PREFIX = re.compile(rf"^(?:優先權\s*[:：]\s*[^\s,，]+|{INTERNAL_TASK_LABEL})\s*[,，]?\s*")
+
+
+@dataclass(frozen=True)
+class OverviewEdits:
+    intro: Optional[str]  # None when the text has no "Ongoing Project" heading to split on
+    notes: Dict[str, str]  # ticket key -> hand-written status text ("" = cleared)
+
+
+def parse_overview_edits(text: str) -> OverviewEdits:
+    """The inverse of weekly_overview_markdown, for the edited draft.
+
+    Everything above the "Ongoing Project" heading is the intro. Under each
+    `- <ticket url>` line, the indented lines are that ticket's status
+    text, with the leading 優先權/內部任務 stripped off — Jira supplies
+    those afresh every week, and keeping them would pin last week's
+    priority. Only the first line is normalised; further lines are kept
+    verbatim.
+    """
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    heading = next((i for i, line in enumerate(lines) if line.strip() == _OVERVIEW_HEADING), None)
+    intro = None if heading is None else "\n".join(lines[:heading]).strip()
+
+    notes: Dict[str, str] = {}
+    index = 0 if heading is None else heading + 1
+    while index < len(lines):
+        match = _ISSUE_LINK_LINE.match(lines[index].strip()) if not lines[index][:1].isspace() else None
+        index += 1
+        if not match:
+            continue
+        block: List[str] = []
+        while index < len(lines) and lines[index][:1].isspace() and lines[index].strip():
+            block.append(lines[index].rstrip())
+            index += 1
+        first = _BULLET_PREFIX.sub("", block[0].strip()) if block else ""
+        while True:
+            stripped = _AUTO_TEXT_PREFIX.sub("", first, count=1)
+            if stripped == first:
+                break
+            first = stripped
+        notes[match.group(1)] = "\n".join([first.strip(), *block[1:]]).rstrip() if block else ""
+    return OverviewEdits(intro=intro, notes=notes)
 
 
 # The window deliberately reaches into the past: an overdue or
@@ -419,6 +554,7 @@ def _member_card(person: Person) -> Dict[str, Any]:
         "display_name": person.display_name,
         "email": person.email or "",
         "avatar": _avatar(person.display_name),
+        "in_overview": person.in_overview,
     }
 
 

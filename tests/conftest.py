@@ -60,6 +60,7 @@ def make_issue():
         due_date: date | None = None,
         completed_at: datetime | None = None,
         priority: str | None = None,
+        labels: tuple[str, ...] = (),
     ) -> Issue:
         return Issue(
             key=key,
@@ -74,6 +75,7 @@ def make_issue():
             due_date=due_date,
             completed_at=completed_at,
             priority=priority,
+            labels=labels,
         )
 
     return _make_issue

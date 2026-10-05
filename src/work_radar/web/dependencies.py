@@ -19,6 +19,7 @@ from work_radar.application.workload_report import WorkloadReportService
 from work_radar.infrastructure.config import (
     JiraConfig,
     member_store_path_from_env,
+    overview_issue_notes_path_from_env,
     overview_note_path_from_env,
     tracking_store_path_from_env,
 )
@@ -30,6 +31,7 @@ from work_radar.infrastructure.jira.repositories import (
     JiraPersonRepository,
     JiraStatusCatalogRepository,
 )
+from work_radar.infrastructure.storage.json_issue_note_repository import JsonIssueNoteRepository
 from work_radar.infrastructure.storage.json_member_repository import JsonMemberRepository
 from work_radar.infrastructure.storage.json_tracking_repository import JsonTrackingRepository
 from work_radar.infrastructure.storage.text_note_repository import TextNoteRepository
@@ -93,6 +95,11 @@ def get_member_repository() -> JsonMemberRepository:
 @lru_cache(maxsize=1)
 def get_overview_note_repository() -> TextNoteRepository:
     return TextNoteRepository(overview_note_path_from_env())
+
+
+@lru_cache(maxsize=1)
+def get_overview_issue_note_repository() -> JsonIssueNoteRepository:
+    return JsonIssueNoteRepository(overview_issue_notes_path_from_env())
 
 
 @lru_cache(maxsize=1)

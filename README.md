@@ -95,8 +95,20 @@ OVERVIEW_PROJECT_RANK=ABC,DEF   # project priority order in the weekly overview
 ```
 
 The local JSON stores can be relocated with `MEMBER_STORE_PATH`,
-`TRACKING_STORE_PATH` and `OVERVIEW_NOTE_PATH`; by default they sit under
-`data/`.
+`TRACKING_STORE_PATH`, `OVERVIEW_NOTE_PATH` and `OVERVIEW_ISSUE_NOTES_PATH`;
+by default they sit under `data/`.
+
+**The weekly overview** (工作量頁 →「產生本週進度總覽」) drafts the
+"Ongoing Project" post (tickets already in Reviewing are left out). Per member,
+tickets are ordered by
+`OVERVIEW_PROJECT_RANK`, then Jira priority, then due date; tickets labelled
+`內部任務` go last in their project. Each ticket gets one line: the Jira
+priority (`優先權:高`; P0..P3 and Highest..Lowest are treated as the same
+scale), or just `內部任務` for labelled tickets, followed by whatever you
+typed there last time. Edit the draft and press 儲存 — the text under each
+ticket is remembered by ticket key (so it only reappears if that ticket is
+still in flight next week), and the strategy text above the list is saved
+too. A member can be left out of the overview from 成員管理.
 
 **5. Start the web UI**
 
@@ -109,7 +121,7 @@ colleague by name and add them. **Do this first** — every other page is
 driven by that roster, so until it has someone in it 個人工作量 and 團隊風險
 are empty by design, not broken.
 
-That roster (and the 追蹤事項 list, and the saved overview note) is stored
+That roster (and the 追蹤事項 list, and the saved overview text) is stored
 as JSON under `data/`, which is gitignored — you start with an empty one,
 and nothing is ever written back to Jira.
 

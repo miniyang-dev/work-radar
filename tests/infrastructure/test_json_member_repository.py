@@ -42,3 +42,20 @@ def test_remove_member_deletes_only_the_matching_account(tmp_path):
     repository.remove_member("acc-1")
 
     assert repository.list_members() == [amy]
+
+
+def test_in_overview_defaults_to_true_and_round_trips(tmp_path):
+    repository = JsonMemberRepository(tmp_path / "members.json")
+    repository.add_member(Person(account_id="acc-1", display_name="Alice Wu"))
+    repository.add_member(Person(account_id="acc-2", display_name="Amy Lin", in_overview=False))
+
+    flags = {member.account_id: member.in_overview for member in repository.list_members()}
+
+    assert flags == {"acc-1": True, "acc-2": False}
+
+
+def test_a_roster_file_written_before_the_flag_existed_still_loads(tmp_path):
+    path = tmp_path / "members.json"
+    path.write_text('[{"account_id": "acc-1", "display_name": "Alice Wu", "email": null}]', encoding="utf-8")
+
+    assert JsonMemberRepository(path).list_members() == [Person(account_id="acc-1", display_name="Alice Wu")]

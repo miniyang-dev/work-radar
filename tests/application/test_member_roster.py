@@ -95,3 +95,31 @@ def test_search_candidates_excludes_people_already_on_the_roster():
     candidates = service.search_candidates("Alice")
 
     assert candidates == [alice_lin]
+
+
+def test_set_in_overview_flips_only_the_flag():
+    alice = Person(account_id="acc-1", display_name="Alice Wu", email="alice@example.com")
+    repository = FakeMemberRepository([alice])
+    service = MemberRosterService(repository, FakePersonRepository([]))
+
+    service.set_in_overview("acc-1", False)
+
+    assert service.get_member("acc-1") == Person(
+        account_id="acc-1", display_name="Alice Wu", email="alice@example.com", in_overview=False
+    )
+
+
+def test_set_in_overview_for_an_unknown_member_raises():
+    service = MemberRosterService(FakeMemberRepository([]), FakePersonRepository([]))
+
+    with pytest.raises(PersonNotFoundError):
+        service.set_in_overview("nope", False)
+
+
+def test_renaming_a_member_keeps_their_overview_preference():
+    repository = FakeMemberRepository([Person(account_id="acc-1", display_name="Alice Wu", in_overview=False)])
+    service = MemberRosterService(repository, FakePersonRepository([]))
+
+    service.rename_member("acc-1", "Alice W.")
+
+    assert service.get_member("acc-1").in_overview is False

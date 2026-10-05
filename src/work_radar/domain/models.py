@@ -30,6 +30,10 @@ class Person:
     account_id: str
     display_name: str
     email: str | None = None
+    # A roster preference, not a Jira fact: lets the weekly overview skip
+    # someone (typically the person writing it) who is on the roster for
+    # their workload but isn't part of the status update.
+    in_overview: bool = True
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,7 @@ class Issue:
     # open. Not the same as `updated_at`, which keeps moving every time
     # someone comments on a finished ticket.
     completed_at: datetime | None = None
+    labels: tuple[str, ...] = ()
 
     @property
     def is_open(self) -> bool:

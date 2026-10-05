@@ -14,6 +14,14 @@ from work_radar.domain.ports import IssueRepository, PersonRepository
 # work — actually being executed or reviewed right now, as opposed to
 # queued/pending/approved-but-not-started work sitting in the backlog.
 _ACTIVE_STATUS_KEYWORDS = ("running", "reviewing")
+_REVIEWING_STATUS_KEYWORD = "reviewing"
+
+
+def is_reviewing(issue: Issue) -> bool:
+    """Work that is finished on the assignee's side and waiting on someone
+    else's verdict — still active, but no longer what they're driving.
+    """
+    return _REVIEWING_STATUS_KEYWORD in issue.status.name.lower()
 
 
 def start_of_week(today: date) -> date:
@@ -61,15 +69,16 @@ class WorkloadReport:
     # dataclass (no __setattr__ involved) as long as there are no __slots__.
     @cached_property
     def active_issues(self) -> list[Issue]:
-        """Issues actually being worked or reviewed right now, soonest due
-        date first (undated issues last) — what needs attention today.
+        """Issues actually being worked or reviewed right now — what needs
+        attention today. Ones being worked come first, then those in
+        review; within each, soonest due date first (undated last).
         """
         matches = [
             issue
             for issue in self.issues
             if any(keyword in issue.status.name.lower() for keyword in _ACTIVE_STATUS_KEYWORDS)
         ]
-        return sorted(matches, key=lambda issue: (issue.due_date is None, issue.due_date))
+        return sorted(matches, key=lambda issue: (is_reviewing(issue), issue.due_date is None, issue.due_date))
 
     @cached_property
     def completed_issues(self) -> list[Issue]:

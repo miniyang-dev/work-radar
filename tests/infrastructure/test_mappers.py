@@ -218,3 +218,34 @@ def test_parses_timestamps_with_and_without_milliseconds():
 def test_unrecognized_timestamp_raises_a_readable_error():
     with pytest.raises(ValueError, match="Unrecognized Jira timestamp"):
         _parse_timestamp("last Tuesday")
+
+
+def test_to_issue_reads_labels():
+    raw = {
+        "key": "GHI-1684",
+        "fields": {
+            "summary": "Gemini 遷移",
+            "status": {"name": "Running", "statusCategory": {"key": "indeterminate"}},
+            "project": {"key": "GHI"},
+            "issuetype": {"name": "Task"},
+            "updated": "2026-09-30T13:56:00.000+0800",
+            "created": "2026-09-01T09:00:00.000+0800",
+            "labels": ["內部任務", "cost"],
+        },
+    }
+
+    assert to_issue(raw).labels == ("內部任務", "cost")
+
+
+def test_to_issue_has_no_labels_when_the_field_is_missing_or_null():
+    base = {
+        "summary": "x",
+        "status": {"name": "Running", "statusCategory": {"key": "indeterminate"}},
+        "project": {"key": "GHI"},
+        "issuetype": {"name": "Task"},
+        "updated": "2026-09-30T13:56:00.000+0800",
+        "created": "2026-09-01T09:00:00.000+0800",
+    }
+
+    assert to_issue({"key": "GHI-1", "fields": base}).labels == ()
+    assert to_issue({"key": "GHI-2", "fields": {**base, "labels": None}}).labels == ()

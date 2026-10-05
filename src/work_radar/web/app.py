@@ -27,6 +27,7 @@ from work_radar.web.dependencies import (
     get_issue_comment_service,
     get_member_repository,
     get_member_roster_service,
+    get_overview_issue_note_repository,
     get_overview_note_repository,
     get_project_audit_service,
     get_tracking_list_service,
@@ -42,13 +43,14 @@ from work_radar.web.presenters import (
     member_options_view,
     member_roster_view,
     normalize_group_by,
+    parse_overview_edits,
     project_audit_view,
     team_risk_view,
     unticketed_by_member,
     tracking_priority_options,
     tracking_status_options,
     tracking_view,
-    weekly_overview_markdown,
+    weekly_overview_view,
     weekly_view,
     workload_view,
 )
@@ -114,12 +116,15 @@ def epic(request: Request, key: Optional[str] = None):
 
 
 @app.get("/workload", response_class=HTMLResponse)
-def workload(request: Request):
+def workload(request: Request, panel: Optional[str] = None):
     """Shows every roster member's open workload at once, grouped by
     member — no name/selection step, since the roster (added via
     /members) already says who to show.
+
+    `panel` names a side panel to leave open, so saving from inside one
+    doesn't land back on a collapsed page.
     """
-    context = {"active_nav": "workload", "overview_note": ""}
+    context = {"active_nav": "workload", "overview_note": "", "open_panel": panel or ""}
     try:
         overview_note = get_overview_note_repository().read()
         context["overview_note"] = overview_note
@@ -136,7 +141,11 @@ def workload(request: Request):
             for report in reports
         ]
         context["gantt"] = gantt_view(reports)
-        context["overview_markdown"] = weekly_overview_markdown(reports, intro=overview_note)
+        context["overview"] = weekly_overview_view(
+            reports,
+            intro=overview_note,
+            issue_notes=get_overview_issue_note_repository().read_all(),
+        )
     except _KNOWN_ERRORS as error:
         context["error"] = str(error)
     return templates.TemplateResponse(request, "workload.html", context)
@@ -145,7 +154,20 @@ def workload(request: Request):
 @app.post("/workload/overview-note")
 def workload_overview_note(content: str = Form("")):
     get_overview_note_repository().write(content)
-    return RedirectResponse(url="/workload", status_code=303)
+    return RedirectResponse(url="/workload?panel=note", status_code=303)
+
+
+@app.post("/workload/overview-draft")
+def workload_overview_draft(content: str = Form("")):
+    """Saves the edited weekly overview: each ticket's hand-written status
+    text, keyed by ticket, and the intro above the list — so next week's
+    draft starts from this one instead of from blank.
+    """
+    edits = parse_overview_edits(content)
+    get_overview_issue_note_repository().update(edits.notes)
+    if edits.intro is not None:
+        get_overview_note_repository().write(edits.intro)
+    return RedirectResponse(url="/workload?panel=overview", status_code=303)
 
 
 @app.get("/members", response_class=HTMLResponse)
@@ -176,6 +198,12 @@ def members_add(account_id: str = Form(...), display_name: str = Form(...), emai
 @app.post("/members/{account_id}/rename")
 def members_rename(account_id: str, display_name: str = Form(...)):
     get_member_roster_service().rename_member(account_id, display_name.strip())
+    return RedirectResponse(url="/members", status_code=303)
+
+
+@app.post("/members/{account_id}/overview")
+def members_overview(account_id: str, include: bool = Form(...)):
+    get_member_roster_service().set_in_overview(account_id, include)
     return RedirectResponse(url="/members", status_code=303)
 
 

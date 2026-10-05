@@ -39,7 +39,7 @@
           {{ macros.issue_group("本週已完成(依完成時間排序)", "#a25ddc", report.completed_issues, show_completed_at=True) }}
 
           {% if report.issue_count %}
-          {{ macros.issue_group("進行中(依到期日排序)", "#00c875", report.active_issues, show_due_date=True) }}
+          {{ macros.issue_group("進行中(驗收中排最後,依到期日排序)", "#00c875", report.active_issues, show_due_date=True) }}
 
           {% if report.backlog_groups_by_project %}
           <details class="backlog-section">
@@ -101,11 +101,11 @@
 
       <div class="board">
         <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-          <button type="button" class="collapse-toggle" onclick="workRadarToggleNote(this)">戰略方向設定</button>
-          <button type="button" class="collapse-toggle" onclick="workRadarToggleOverview(this)">產生本週進度總覽</button>
+          <button type="button" class="collapse-toggle" data-label="戰略方向設定" onclick="workRadarTogglePanel(this, 'note-panel')">{{ '收合' if open_panel == 'note' else '戰略方向設定' }}</button>
+          <button type="button" class="collapse-toggle" data-label="產生本週進度總覽" onclick="workRadarTogglePanel(this, 'overview-panel')">{{ '收合' if open_panel == 'overview' else '產生本週進度總覽' }}</button>
         </div>
 
-        <div id="note-panel" hidden style="margin-top: 0.8rem;">
+        <div id="note-panel" {% if open_panel != 'note' %}hidden{% endif %} style="margin-top: 0.8rem;">
           <div class="board-subtitle" style="margin: 0 0 0.5rem;">這裡存的內容,每次「產生本週進度總覽」都會自動放在最上方。</div>
           <form method="post" action="/workload/overview-note">
             <textarea name="content" class="overview-textarea" rows="6">{{ overview_note }}</textarea>
@@ -115,13 +115,19 @@
           </form>
         </div>
 
-        <div id="overview-panel" hidden style="margin-top: 0.8rem;">
-          <div class="board-subtitle" style="margin: 0 0 0.5rem;">依成員分組,專案排序依 OVERVIEW_PROJECT_RANK 設定,未列入的排在後面,同專案再依到期日排序。每張票自動帶「人力/完成日」(沒設到期日就不帶),實際狀態說明請自行補在後面,填完直接複製貼上。</div>
-          <textarea id="overview-textarea" class="overview-textarea" rows="18">{{ overview_markdown }}</textarea>
-          <div style="margin-top: 0.6rem;">
-            <button type="button" onclick="workRadarCopyOverview()">複製</button>
-            <span id="overview-copy-status" class="board-subtitle" style="display: inline; margin-left: 0.6rem;"></span>
-          </div>
+        <div id="overview-panel" {% if open_panel != 'overview' %}hidden{% endif %} style="margin-top: 0.8rem;">
+          <div class="board-subtitle" style="margin: 0 0 0.5rem;">依成員分組,專案排序依 OVERVIEW_PROJECT_RANK 設定(未列入的排在後面),同專案再依 Jira 優先權、到期日排序,「內部任務」label 的排在該專案最後。已在「驗收」的票不列入。每張票的「優先權」與「內部任務」由 Jira 帶入;你在下面補的說明按「儲存」後,下週同一張票會自動帶回來。上方戰略方向的修改也會一併儲存。</div>
+          {% if overview.carried_count %}
+          <div class="board-subtitle" style="margin: 0 0 0.5rem;">其中 {{ overview.carried_count }} 張票帶入先前儲存的說明,請確認是否還適用。</div>
+          {% endif %}
+          <form method="post" action="/workload/overview-draft">
+            <textarea id="overview-textarea" name="content" class="overview-textarea" rows="18">{{ overview.markdown }}</textarea>
+            <div style="margin-top: 0.6rem;">
+              <button type="button" onclick="workRadarCopyOverview()">複製</button>
+              <button type="submit">儲存</button>
+              <span id="overview-copy-status" class="board-subtitle" style="display: inline; margin-left: 0.6rem;"></span>
+            </div>
+          </form>
         </div>
       </div>
     </aside>
@@ -134,16 +140,10 @@
       button.textContent = collapsed ? '展開' : '收合';
     }
 
-    function workRadarToggleNote(button) {
-      var panel = document.getElementById('note-panel');
+    function workRadarTogglePanel(button, panelId) {
+      var panel = document.getElementById(panelId);
       panel.hidden = !panel.hidden;
-      button.textContent = panel.hidden ? '戰略方向設定' : '收合';
-    }
-
-    function workRadarToggleOverview(button) {
-      var panel = document.getElementById('overview-panel');
-      panel.hidden = !panel.hidden;
-      button.textContent = panel.hidden ? '產生本週進度總覽' : '收合';
+      button.textContent = panel.hidden ? button.dataset.label : '收合';
     }
 
     function workRadarCopyOverview() {

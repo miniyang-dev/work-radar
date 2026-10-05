@@ -52,3 +52,14 @@ def test_unticketed_items_keep_their_tracking_fields(make_issue):
     assert row["due_date"] == ""
     # And it does not disturb the issue-derived halves of the view.
     assert [issue["key"] for issue in workload_view(report)["active_issues"]] == ["GHI-1"]
+
+
+def test_a_reviewing_ticket_gets_its_own_status_colour_apart_from_running(make_issue):
+    from work_radar.domain.models import StatusCategory
+    from work_radar.web.presenters import issue_row
+
+    running = make_issue("GHI-1", status_name="Running / 執行中", status_category=StatusCategory.IN_PROGRESS)
+    reviewing = make_issue("GHI-2", status_name="Reviewing / 驗收", status_category=StatusCategory.IN_PROGRESS)
+
+    assert issue_row(running)["status_css"] == "status-progress"
+    assert issue_row(reviewing)["status_css"] == "status-review"

@@ -27,7 +27,7 @@ from work_radar.infrastructure.jira.mappers import (
 logger = logging.getLogger(__name__)
 
 _ISSUE_FIELDS = (
-    "summary,status,assignee,priority,updated,created,duedate,project,issuetype,parent"
+    "summary,status,assignee,priority,updated,created,duedate,project,issuetype,parent,labels"
     f",{START_DATE_FIELD},{STATUS_CATEGORY_CHANGED_FIELD}"
 )
 _SEARCH_PAGE_SIZE = 100

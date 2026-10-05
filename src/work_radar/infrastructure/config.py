@@ -82,6 +82,15 @@ def overview_note_path_from_env() -> Path:
     return _resolve_path("OVERVIEW_NOTE_PATH", "data/overview_note.txt")
 
 
+def overview_issue_notes_path_from_env() -> Path:
+    """Where the per-ticket status lines for the weekly overview are kept.
+
+    Defaults to `data/overview_issue_notes.json` under the project root —
+    overridable via OVERVIEW_ISSUE_NOTES_PATH.
+    """
+    return _resolve_path("OVERVIEW_ISSUE_NOTES_PATH", "data/overview_issue_notes.json")
+
+
 def tracking_store_path_from_env() -> Path:
     """Where the hand-kept 追蹤事項 follow-up list is persisted.
 

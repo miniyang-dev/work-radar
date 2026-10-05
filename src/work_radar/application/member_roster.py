@@ -7,6 +7,8 @@ would otherwise need to be typed and re-resolved.
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 from work_radar.domain.exceptions import PersonNotFoundError
 from work_radar.domain.models import Person
 from work_radar.domain.ports import MemberRepository, PersonRepository
@@ -36,7 +38,11 @@ class MemberRosterService:
 
     def rename_member(self, account_id: str, display_name: str) -> None:
         person = self.get_member(account_id)
-        self._members.add_member(Person(account_id=person.account_id, display_name=display_name, email=person.email))
+        self._members.add_member(replace(person, display_name=display_name))
+
+    def set_in_overview(self, account_id: str, included: bool) -> None:
+        person = self.get_member(account_id)
+        self._members.add_member(replace(person, in_overview=included))
 
     def remove_member(self, account_id: str) -> None:
         self._members.remove_member(account_id)

@@ -52,6 +52,10 @@
         <input type="text" name="display_name" value="{{ member.display_name }}">
         <button type="submit" class="small">改名</button>
       </form>
+      <form method="post" action="/members/{{ member.account_id }}/overview">
+        <input type="hidden" name="include" value="{{ 'false' if member.in_overview else 'true' }}">
+        <button type="submit" class="small" title="切換這個人是否出現在「產生本週進度總覽」">{{ '週總覽:列入中' if member.in_overview else '週總覽:已排除' }}</button>
+      </form>
       <form method="post" action="/members/{{ member.account_id }}/delete" onsubmit="return confirm('確定要移除 {{ member.display_name }} 嗎?');">
         <button type="submit" class="small danger">移除</button>
       </form>

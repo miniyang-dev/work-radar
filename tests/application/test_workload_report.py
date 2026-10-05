@@ -163,10 +163,25 @@ def test_active_issues_are_sorted_by_due_date_with_undated_last(make_issue):
     alice = Person(account_id="acc-1", display_name="Alice Wu")
     no_due_date = make_issue("GHI-1", status_name="Running", due_date=None)
     due_later = make_issue("GHI-2", status_name="Running", due_date=date(2026, 12, 1))
-    due_sooner = make_issue("GHI-3", status_name="Reviewing", due_date=date(2026, 9, 1))
+    due_sooner = make_issue("GHI-3", status_name="Running", due_date=date(2026, 9, 1))
     report = WorkloadReport(person=alice, issues=[no_due_date, due_later, due_sooner])
 
     assert [issue.key for issue in report.active_issues] == ["GHI-3", "GHI-2", "GHI-1"]
+
+
+def test_active_issues_list_reviewing_ones_after_the_running_ones(make_issue):
+    """A ticket in review sinks below everything still being worked, even
+    when it is due sooner or has no date at all; due date orders each
+    group separately.
+    """
+    alice = Person(account_id="acc-1", display_name="Alice Wu")
+    review_due_soon = make_issue("GHI-1", status_name="Reviewing / 驗收", due_date=date(2026, 9, 1))
+    run_no_date = make_issue("GHI-2", status_name="Running / 執行中", due_date=None)
+    run_due = make_issue("GHI-3", status_name="Running / 執行中", due_date=date(2026, 12, 1))
+    review_no_date = make_issue("GHI-4", status_name="Reviewing / 驗收", due_date=None)
+    report = WorkloadReport(person=alice, issues=[review_no_date, run_no_date, review_due_soon, run_due])
+
+    assert [issue.key for issue in report.active_issues] == ["GHI-3", "GHI-2", "GHI-1", "GHI-4"]
 
 
 def test_backlog_issues_excludes_active_ones(make_issue):

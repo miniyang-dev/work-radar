@@ -96,6 +96,7 @@ def to_issue(raw: dict) -> Issue:
         start_date=_parse_date(fields.get(START_DATE_FIELD)),
         due_date=_parse_date(fields.get("duedate")),
         completed_at=_parse_completed_at(fields, status),
+        labels=tuple(fields.get("labels") or ()),
     )
 
 

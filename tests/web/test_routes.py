@@ -23,6 +23,7 @@ _SERVICE_GETTERS = (
     "get_issue_comment_service",
     "get_member_repository",
     "get_member_roster_service",
+    "get_overview_issue_note_repository",
     "get_overview_note_repository",
     "get_project_audit_service",
     "get_tracking_list_service",
@@ -45,6 +46,32 @@ _PAGES = (
 @pytest.fixture
 def client():
     return TestClient(web_app.app)
+
+
+class FakeIssueNotes:
+    """In-memory stand-in for the per-ticket note store. Patched in for
+    every test so none of them reads or writes the real data/ directory.
+    """
+
+    def __init__(self, notes=None):
+        self.notes = dict(notes or {})
+
+    def read_all(self):
+        return dict(self.notes)
+
+    def update(self, notes):
+        for key, note in notes.items():
+            if note.strip():
+                self.notes[key] = note
+            else:
+                self.notes.pop(key, None)
+
+
+@pytest.fixture(autouse=True)
+def issue_notes(monkeypatch):
+    fake = FakeIssueNotes()
+    monkeypatch.setattr(web_app, "get_overview_issue_note_repository", lambda: fake)
+    return fake
 
 
 @pytest.fixture
@@ -503,3 +530,87 @@ def test_tracking_mutations_on_an_unknown_id_redirect_rather_than_fail(client, m
     assert [updated.status_code, status.status_code, deleted.status_code] == [303, 303, 303]
     assert service.statuses == [("nope", TrackingStatus.DONE)]
     assert service.deleted == ["nope"]
+
+
+def _post_draft(client, content):
+    return client.post("/workload/overview-draft", data={"content": content}, follow_redirects=False)
+
+
+def test_saving_the_draft_stores_each_tickets_text_and_the_intro(client, monkeypatch, issue_notes, jira_domain):
+    class Note:
+        written = None
+
+        def read(self):
+            return ""
+
+        def write(self, content):
+            Note.written = content
+
+    monkeypatch.setattr(web_app, "get_overview_note_repository", lambda: Note())
+
+    response = _post_draft(
+        client,
+        "戰略方向\r\n\r\nOngoing Project\r\nAlice\r\n"
+        f"- https://{jira_domain}/browse/ABC-1\r\n  - 優先權:高, 待PM驗完品質\r\n",
+    )
+
+    assert response.status_code == 303
+    # Back to the page with the overview still open, not a collapsed panel.
+    assert response.headers["location"] == "/workload?panel=overview"
+    assert issue_notes.notes == {"ABC-1": "待PM驗完品質"}
+    assert Note.written == "戰略方向"
+
+
+def test_saving_a_draft_without_the_heading_leaves_the_intro_alone(client, monkeypatch, issue_notes, jira_domain):
+    class Note:
+        def write(self, content):
+            raise AssertionError("intro must not be rewritten")
+
+    monkeypatch.setattr(web_app, "get_overview_note_repository", lambda: Note())
+
+    _post_draft(client, f"- https://{jira_domain}/browse/ABC-1\n  - 說明\n")
+
+    assert issue_notes.notes == {"ABC-1": "說明"}
+
+
+def test_workload_fills_the_draft_from_saved_notes_and_jira(client, monkeypatch, issue_notes, make_issue, jira_domain):
+    alice = Person(account_id="acc-1", display_name="Alice Wu")
+    issue = make_issue("ABC-1", status_name="Running", project_key="ABC", priority="High", assignee=alice)
+    issue_notes.notes["ABC-1"] = "待PM驗完品質"
+
+    class Roster:
+        def list_members(self):
+            return [alice]
+
+    class Workload:
+        def build_reports_for_people(self, people, completed_since=None):
+            return [WorkloadReport(person=alice, issues=[issue])]
+
+    class Note:
+        def read(self):
+            return ""
+
+    monkeypatch.setattr(web_app, "get_member_roster_service", lambda: Roster())
+    monkeypatch.setattr(web_app, "get_workload_report_service", lambda: Workload())
+    monkeypatch.setattr(web_app, "get_overview_note_repository", lambda: Note())
+
+    body = client.get("/workload?panel=overview").text
+
+    assert "優先權:高, 待PM驗完品質" in body
+    assert "1 張票帶入先前儲存的說明" in body
+    assert '<div id="overview-panel"  style' in body  # open: no `hidden` attribute
+
+
+def test_members_page_toggles_the_overview_flag(client, monkeypatch):
+    calls = []
+
+    class Roster:
+        def set_in_overview(self, account_id, included):
+            calls.append((account_id, included))
+
+    monkeypatch.setattr(web_app, "get_member_roster_service", lambda: Roster())
+
+    response = client.post("/members/acc-1/overview", data={"include": "false"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert calls == [("acc-1", False)]

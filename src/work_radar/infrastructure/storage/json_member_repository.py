@@ -34,13 +34,24 @@ class JsonMemberRepository:
             return []
         raw = json.loads(self._path.read_text(encoding="utf-8"))
         return [
-            Person(account_id=item["account_id"], display_name=item["display_name"], email=item.get("email"))
+            Person(
+                account_id=item["account_id"],
+                display_name=item["display_name"],
+                email=item.get("email"),
+                # Absent in files written before the flag existed.
+                in_overview=item.get("in_overview", True),
+            )
             for item in raw
         ]
 
     def _write(self, members: list[Person]) -> None:
         payload = [
-            {"account_id": member.account_id, "display_name": member.display_name, "email": member.email}
+            {
+                "account_id": member.account_id,
+                "display_name": member.display_name,
+                "email": member.email,
+                "in_overview": member.in_overview,
+            }
             for member in members
         ]
         atomic_write_text(self._path, json.dumps(payload, ensure_ascii=False, indent=2))
