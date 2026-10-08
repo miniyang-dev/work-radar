@@ -598,7 +598,8 @@ def test_workload_fills_the_draft_from_saved_notes_and_jira(client, monkeypatch,
 
     assert "優先權:高, 待PM驗完品質" in body
     assert "1 張票帶入先前儲存的說明" in body
-    assert '<div id="overview-panel"  style' in body  # open: no `hidden` attribute
+    panel_tag = body.split('<div id="overview-panel"', 1)[1].split(">", 1)[0]
+    assert "hidden" not in panel_tag  # open
 
 
 def test_members_page_toggles_the_overview_flag(client, monkeypatch):

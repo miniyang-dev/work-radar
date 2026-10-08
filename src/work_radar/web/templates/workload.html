@@ -4,6 +4,46 @@
 {% block content %}
 {% if reports is defined %}
   {% if reports %}
+  <div class="workload-toolbar">
+    <nav class="member-jump" aria-label="跳到成員">
+      {% for report in reports %}
+      <a href="#member-{{ report.person.account_id }}" class="member-chip">
+        <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 24px; height: 24px; font-size: 0.7rem;">{{ report.person.avatar.initials }}</span>
+        {{ report.person.display_name }}
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="toolbar-actions">
+      <button type="button" class="collapse-toggle" data-label="戰略方向設定" aria-controls="note-panel" aria-expanded="{{ 'true' if open_panel == 'note' else 'false' }}" onclick="workRadarTogglePanel(this, 'note-panel')">{{ '收合' if open_panel == 'note' else '戰略方向設定' }}</button>
+      <button type="button" class="collapse-toggle" data-label="產生本週進度總覽" aria-controls="overview-panel" aria-expanded="{{ 'true' if open_panel == 'overview' else 'false' }}" onclick="workRadarTogglePanel(this, 'overview-panel')">{{ '收合' if open_panel == 'overview' else '產生本週進度總覽' }}</button>
+    </div>
+  </div>
+
+  <div id="note-panel" class="board" {% if open_panel != 'note' %}hidden{% endif %}>
+    <div class="board-subtitle">這裡存的內容,每次「產生本週進度總覽」都會自動放在最上方。</div>
+    <form method="post" action="/workload/overview-note">
+      <textarea name="content" class="overview-textarea" rows="6" aria-label="戰略方向">{{ overview_note }}</textarea>
+      <div class="panel-actions">
+        <button type="submit">儲存</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="overview-panel" class="board" {% if open_panel != 'overview' %}hidden{% endif %}>
+    <div class="board-subtitle">依成員分組,專案排序依 OVERVIEW_PROJECT_RANK 設定(未列入的排在後面),同專案再依 Jira 優先權、到期日排序,「內部任務」label 的排在該專案最後。已在「驗收」的票不列入。每張票的「優先權」與「內部任務」由 Jira 帶入;你在下面補的說明按「儲存」後,下週同一張票會自動帶回來。上方戰略方向的修改也會一併儲存。</div>
+    {% if overview.carried_count %}
+    <div class="board-subtitle">其中 {{ overview.carried_count }} 張票帶入先前儲存的說明,請確認是否還適用。</div>
+    {% endif %}
+    <form method="post" action="/workload/overview-draft">
+      <textarea id="overview-textarea" name="content" class="overview-textarea" rows="18" aria-label="本週進度總覽">{{ overview.markdown }}</textarea>
+      <div class="panel-actions">
+        <button type="button" onclick="workRadarCopyOverview()">複製</button>
+        <button type="submit">儲存</button>
+        <span id="overview-copy-status" class="board-subtitle" role="status"></span>
+      </div>
+    </form>
+  </div>
+
   <div class="workload-layout">
     <div class="workload-main">
       {% for report in reports %}
@@ -62,7 +102,15 @@
     <aside class="workload-gantt">
       <div class="board">
         <div class="board-title">工作甘特圖</div>
-        <div class="board-subtitle">上週到未來兩週,依成員分組,直線=今天;綠色=本週已完成(起始日到完成日),其餘為進行中(起始日到到期日);紅色=已逾期,虛線=無到期日,箭頭=到期日超過兩週</div>
+        <div class="board-subtitle">上週到未來兩週,依成員分組</div>
+        <ul class="gantt-legend" aria-label="圖例">
+          <li><i class="swatch today"></i>今天</li>
+          <li><i class="swatch completed"></i>本週已完成</li>
+          <li><i class="swatch due_soon"></i>進行中</li>
+          <li><i class="swatch overdue"></i>已逾期</li>
+          <li><i class="swatch open_ended"></i>無到期日</li>
+          <li><i class="swatch beyond">→</i>到期日超過兩週</li>
+        </ul>
 
         {% if gantt.groups %}
         <div class="gantt-chart">
@@ -76,7 +124,7 @@
           {% for group in gantt.groups %}
           <div class="gantt-group">
             <div class="gantt-group-title">
-              <span class="avatar" style="background: {{ group.avatar.color }}; width: 18px; height: 18px; font-size: 0.6rem;">{{ group.avatar.initials }}</span>
+              <span class="avatar" style="background: {{ group.avatar.color }}; width: 20px; height: 20px; font-size: 0.7rem;">{{ group.avatar.initials }}</span>
               {{ group.member }}
             </div>
             {% for row in group.rows %}
@@ -98,38 +146,6 @@
         <p class="empty">目前沒有進行中的項目。</p>
         {% endif %}
       </div>
-
-      <div class="board">
-        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-          <button type="button" class="collapse-toggle" data-label="戰略方向設定" onclick="workRadarTogglePanel(this, 'note-panel')">{{ '收合' if open_panel == 'note' else '戰略方向設定' }}</button>
-          <button type="button" class="collapse-toggle" data-label="產生本週進度總覽" onclick="workRadarTogglePanel(this, 'overview-panel')">{{ '收合' if open_panel == 'overview' else '產生本週進度總覽' }}</button>
-        </div>
-
-        <div id="note-panel" {% if open_panel != 'note' %}hidden{% endif %} style="margin-top: 0.8rem;">
-          <div class="board-subtitle" style="margin: 0 0 0.5rem;">這裡存的內容,每次「產生本週進度總覽」都會自動放在最上方。</div>
-          <form method="post" action="/workload/overview-note">
-            <textarea name="content" class="overview-textarea" rows="6">{{ overview_note }}</textarea>
-            <div style="margin-top: 0.6rem;">
-              <button type="submit">儲存</button>
-            </div>
-          </form>
-        </div>
-
-        <div id="overview-panel" {% if open_panel != 'overview' %}hidden{% endif %} style="margin-top: 0.8rem;">
-          <div class="board-subtitle" style="margin: 0 0 0.5rem;">依成員分組,專案排序依 OVERVIEW_PROJECT_RANK 設定(未列入的排在後面),同專案再依 Jira 優先權、到期日排序,「內部任務」label 的排在該專案最後。已在「驗收」的票不列入。每張票的「優先權」與「內部任務」由 Jira 帶入;你在下面補的說明按「儲存」後,下週同一張票會自動帶回來。上方戰略方向的修改也會一併儲存。</div>
-          {% if overview.carried_count %}
-          <div class="board-subtitle" style="margin: 0 0 0.5rem;">其中 {{ overview.carried_count }} 張票帶入先前儲存的說明,請確認是否還適用。</div>
-          {% endif %}
-          <form method="post" action="/workload/overview-draft">
-            <textarea id="overview-textarea" name="content" class="overview-textarea" rows="18">{{ overview.markdown }}</textarea>
-            <div style="margin-top: 0.6rem;">
-              <button type="button" onclick="workRadarCopyOverview()">複製</button>
-              <button type="submit">儲存</button>
-              <span id="overview-copy-status" class="board-subtitle" style="display: inline; margin-left: 0.6rem;"></span>
-            </div>
-          </form>
-        </div>
-      </div>
     </aside>
   </div>
 
@@ -144,6 +160,7 @@
       var panel = document.getElementById(panelId);
       panel.hidden = !panel.hidden;
       button.textContent = panel.hidden ? button.dataset.label : '收合';
+      button.setAttribute('aria-expanded', String(!panel.hidden));
     }
 
     function workRadarCopyOverview() {

@@ -111,7 +111,7 @@
       padding: 0.4rem 0.85rem;
       transition: background 0.15s ease, color 0.15s ease;
     }
-    .refresh-tab:hover { background: #f0f2f5; color: var(--primary); }
+    .refresh-tab:hover { background: #f0f2f5; color: var(--primary-hover); }
 
     /* --- monday-style board card --- */
     .board {
@@ -150,7 +150,7 @@
     }
     button:hover { background: var(--primary-hover); }
     button.danger { background: var(--status-stuck); }
-    button.danger:hover { background: #c62e4b; }
+    button.danger:hover { background: #b3233f; }
     button.small { padding: 0.4rem 0.8rem; font-size: 0.82rem; }
 
     h2 { font-size: 1.2rem; margin: 0 0 0.35rem; }
@@ -280,7 +280,7 @@
       font-size: 0.78rem;
       font-weight: 600;
     }
-    .priority-high { background: #fde3e7; color: #c62e4b; }
+    .priority-high { background: #fde3e7; color: #b3233f; }
     .priority-low { background: #f0f2f5; color: #8b8fa3; }
     .overdue-text { color: var(--status-stuck); font-weight: 700; }
     /* A due date that hasn't passed yet, on work that hasn't started. */
@@ -298,11 +298,11 @@
       white-space: nowrap;
     }
     .urgency-critical { background: #e2445c; color: #fff; }
-    .urgency-high { background: #fde3e7; color: #c62e4b; }
+    .urgency-high { background: #fde3e7; color: #b3233f; }
     .urgency-medium { background: #fff3e0; color: #b26a00; }
     .urgency-low { background: #f0f2f5; color: #8b8fa3; }
     .urgency-why { display: block; margin-top: 0.2rem; font-size: 0.7rem; color: var(--text-muted); }
-    .stat-pill.alert { background: #fde3e7; color: #c62e4b; }
+    .stat-pill.alert { background: #fde3e7; color: #b3233f; }
 
     .stat-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0.75rem 0 1.25rem; }
     .stat-pill { background: #f0f2f5; border-radius: 8px; padding: 0.55rem 1rem; font-size: 0.85rem; color: var(--text); }
@@ -421,7 +421,34 @@
     /* --- workload page: member boards + a sticky gantt sidebar --- */
     .workload-layout { display: flex; align-items: flex-start; gap: 1.5rem; }
     .workload-main { flex: 1; min-width: 0; }
-    .workload-gantt { width: 320px; flex-shrink: 0; position: sticky; top: 1.5rem; }
+    .workload-gantt { width: 320px; flex-shrink: 0; position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; overscroll-behavior: contain; }
+    .workload-gantt .board { margin-bottom: 0; }
+
+    /* --- workload toolbar: jump to a member, open a panel --- */
+    .workload-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem 1.25rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .member-jump { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .member-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.8rem 0.3rem 0.35rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--board-bg);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .member-chip:hover { background: #f0f2f5; border-color: var(--primary); }
+    .toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .toolbar-actions .collapse-toggle { background: var(--board-bg); }
+    .board[hidden] { display: none; }
+    .panel-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+    .panel-actions .board-subtitle { margin: 0; }
+    .board > .board-subtitle + .board-subtitle { margin-top: -0.5rem; }
+    .member-body, .board[id^="member-"] { scroll-margin-top: 1rem; }
     @media (max-width: 900px) {
       /* align-items: flex-start (needed for the side-by-side desktop
          layout) stops children from stretching once flex-direction goes
@@ -434,6 +461,15 @@
     }
     /* The gutter mirrors .gantt-label so the axis dates line up with the
        ends of the tracks below rather than with the board's edges. */
+    .gantt-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin: 0 0 1rem; padding: 0; font-size: 0.74rem; color: var(--text-muted); }
+    .gantt-legend li { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .gantt-legend .swatch { display: inline-block; width: 14px; height: 8px; border-radius: 2px; font-style: normal; font-size: 0.7rem; line-height: 8px; font-weight: 700; }
+    .swatch.today { width: 2px; height: 12px; background: var(--text-muted); border-radius: 0; }
+    .swatch.completed { background: var(--status-done); }
+    .swatch.due_soon { background: var(--status-progress); }
+    .swatch.overdue { background: var(--status-stuck); }
+    .swatch.open_ended { background: var(--status-progress); opacity: 0.5; border: 1px dashed var(--text-muted); }
+    .swatch.beyond { width: auto; height: auto; color: var(--status-progress); line-height: 1; }
     .gantt-axis { display: flex; gap: 0.5rem; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.7rem; }
     .gantt-axis-gutter { width: 76px; flex-shrink: 0; }
     .gantt-axis-scale { position: relative; flex: 1; height: 1em; }
@@ -488,9 +524,28 @@
     .member-card form input[type=text] { min-width: 0; padding: 0.4rem 0.6rem; font-size: 0.85rem; }
     .member-links { margin-top: 0.7rem; display: flex; gap: 0.9rem; flex-wrap: wrap; }
 
+    @media (max-width: 720px) {
+      body { padding: 1.25rem 1rem 3rem; }
+      nav.tabs { width: auto; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; border-radius: 12px; }
+      nav.tabs::-webkit-scrollbar { display: none; }
+      .board { padding: 1.1rem 1rem 1.25rem; }
+      .table-scroll { overflow-x: visible; }
+      table.board-table, .board-table tbody { display: block; min-width: 0; width: 100%; }
+      .board-table tr:first-child:has(th) { display: none; }
+      .board-table tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; background: #fbfbfd; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; padding: 0.65rem 0.9rem; }
+      .board-table td, .board-table tr:hover td { display: block; background: none; border: none !important; padding: 0 !important; border-radius: 0; font-size: 0.82rem; }
+      .board-table td.item-cell { flex: 1 0 100%; min-width: 0; padding-left: 0.6rem !important; }
+      .board-table tr.row-overdue { background: #fdebee; }
+      .board-table tr.row-scheduled { background: #fff5e6; }
+      .board-table tr.comments-row { display: block; padding: 0; border: none; background: none; margin-top: -6px; }
+      .board-table tr.comments-row[hidden] { display: none; }
+      .board-table tr.comments-row td { padding: 0 0 0.5rem !important; }
+      .board-table .item-cell::before { top: 0; bottom: 0; }
+    }
+
     .error {
       background: #fde3e7;
-      color: #c62e4b;
+      color: #b3233f;
       padding: 0.8rem 1.1rem;
       border-radius: 12px;
       margin-bottom: 1.5rem;
