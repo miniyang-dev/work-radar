@@ -211,10 +211,10 @@ def test_backlog_flags_the_rows_that_already_carry_a_due_date(client, monkeypatc
 
     body = client.get("/workload").text
 
-    assert f'<td class="overdue-text">{(today - timedelta(days=3)).isoformat()}</td>' in body
-    assert f'<td class="scheduled-text">{(today + timedelta(days=3)).isoformat()}</td>' in body
+    assert f'<td class="overdue-text" data-label="到期日">{(today - timedelta(days=3)).isoformat()}</td>' in body
+    assert f'<td class="scheduled-text" data-label="到期日">{(today + timedelta(days=3)).isoformat()}</td>' in body
     # The undated majority stays unpainted, or the flag says nothing.
-    assert '<td class="">—</td>' in body
+    assert '<td class="" data-label="到期日">—</td>' in body
     # The whole row is tinted, not just the date cell.
     assert '<tr class="row-overdue">' in body
     assert '<tr class="row-scheduled">' in body

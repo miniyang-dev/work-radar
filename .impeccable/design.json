@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T00:00:00Z",
+  "title": "Design System: work-radar",
+  "extensions": {
+    "colorMeta": {
+      "chart-blue": { "role": "primary", "displayName": "Chart Blue", "canonical": "#1d5c88", "tonalRamp": ["#0b2638", "#123e5b", "#1d5c88", "#3a73a3", "#6aa6d6", "#9cc3e3", "#c9def0", "#e8f1f8"] },
+      "light-amber": { "role": "secondary", "displayName": "Light Amber", "canonical": "#c88a1b", "tonalRamp": ["#3b2504", "#5c3b07", "#84500a", "#c88a1b", "#d9a13a", "#e8c070", "#f6e5c2", "#fbf0d9"] },
+      "done-green": { "role": "secondary", "displayName": "Done Green", "canonical": "#2f6e57", "tonalRamp": ["#0f2a20", "#1b4435", "#2f6e57", "#4a8f74", "#5bbf9a", "#93d6bb", "#c6e9dc", "#e8f5ef"] },
+      "hazard-magenta": { "role": "tertiary", "displayName": "Hazard Magenta", "canonical": "#ad1259", "tonalRamp": ["#3b0a20", "#6a0c38", "#ad1259", "#d03a7c", "#ff80ac", "#f2b3cb", "#f8e5ed", "#fcf2f6"] },
+      "shell": { "role": "neutral", "displayName": "Chart Navy", "canonical": "#2f5f7a", "tonalRamp": ["#08131a", "#0d1f29", "#2f5f7a", "#284250", "#4d6a7b", "#8aa5b3", "#c6d9e3", "#f4f8fa"] },
+      "sea": { "role": "neutral", "displayName": "Pale Sea", "canonical": "#e8edf0", "tonalRamp": ["#1f3340", "#3f5561", "#586f7c", "#8ea3ae", "#ccd7dd", "#e8edf0", "#eff3f5", "#fbfcfc"] }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "Sheet titles and person names." },
+      "body": { "displayName": "Body", "purpose": "Default text, forms and buttons." },
+      "table": { "displayName": "Table", "purpose": "Dense 13px cells, status text and tabs." },
+      "label": { "displayName": "Label", "purpose": "Table headers and small metadata." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-state", "value": "0.15s ease", "purpose": "Colour and border changes on buttons, tabs, chips and the backlog caret." },
+      { "name": "spinner", "value": "0.8s linear infinite", "purpose": "Page loading spinner; slows to 2.4s under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "stack-gantt", "value": "900px" },
+      { "name": "stack-rows", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Chart-blue action; the weekly overview and form submits.",
+      "html": "<button class=\"ds-btn\">產生週報</button>",
+      "css": ".ds-btn { padding: 0.4rem 1rem; border: 1px solid transparent; border-radius: 2px; background: #1d5c88; color: #fff; font: inherit; font-size: 0.875rem; font-weight: 600; line-height: 1.4; cursor: pointer; transition: background 0.15s ease; } .ds-btn:hover { background: #164a6d; } .ds-btn:focus-visible { outline: 2px solid #1d5c88; outline-offset: 2px; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Outlined destructive action with magenta text.",
+      "html": "<button class=\"ds-btn-danger\">刪除</button>",
+      "css": ".ds-btn-danger { padding: 0.4rem 1rem; border: 1px solid #8ea3ae; border-radius: 2px; background: transparent; color: #ad1259; font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-danger:hover { background: #f8e5ed; border-color: #ad1259; } .ds-btn-danger:focus-visible { outline: 2px solid #1d5c88; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Sheet-filled field with a field-border outline.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search\">",
+      "css": ".ds-input { padding: 0.4rem 0.65rem; border: 1px solid #8ea3ae; border-radius: 2px; background: #fbfcfc; color: #1f3340; font: inherit; font-size: 0.875rem; } .ds-input::placeholder { color: #586f7c; } .ds-input:focus { outline: 2px solid #1d5c88; outline-offset: 0; border-color: #1d5c88; }"
+    },
+    {
+      "name": "Shell Tabs",
+      "kind": "nav",
+      "refersTo": "shell-band",
+      "description": "Navy band with text tabs; the active tab has a 2px underline.",
+      "html": "<nav class=\"ds-tabs\"><a href=\"#\" class=\"active\">Workload</a><a href=\"#\">Risk</a><a href=\"#\">Audit</a></nav>",
+      "css": ".ds-tabs { display: flex; gap: 0.25rem; background: #2f5f7a; padding: 0 1rem; } .ds-tabs a { display: flex; align-items: center; padding: 0.75rem; color: #c6d9e3; font-size: 0.8125rem; font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; transition: color 0.15s ease; } .ds-tabs a:hover { color: #f4f8fa; } .ds-tabs a.active { color: #f4f8fa; border-bottom-color: #f4f8fa; } .ds-tabs a:focus-visible { outline: 2px solid #78b6e0; outline-offset: -2px; }"
+    },
+    {
+      "name": "Status Symbols",
+      "kind": "chip",
+      "description": "Chart symbol plus plain text: disc done, half disc in progress, diamond review, triangle waiting, ring to do, dashed square on hold.",
+      "html": "<div style=\"display:grid;gap:6px\"><span class=\"ds-st ds-done\">Done</span><span class=\"ds-st ds-progress\">In progress</span><span class=\"ds-st ds-review\">Review</span><span class=\"ds-st ds-waiting\">Waiting</span><span class=\"ds-st ds-todo\">To do</span><span class=\"ds-st ds-hold\">On hold</span></div>",
+      "css": ".ds-st { display: inline-flex; align-items: center; gap: 0.45rem; color: #1f3340; font-size: 0.8125rem; font-weight: 600; } .ds-st::before { content: ''; width: 0.72rem; height: 0.72rem; flex: none; box-sizing: border-box; border-radius: 50%; } .ds-done::before { background: #2f6e57; } .ds-progress::before { border: 1.5px solid #c88a1b; background: linear-gradient(90deg, #c88a1b 50%, transparent 50%); } .ds-review::before { background: #3a73a3; border-radius: 1px; transform: rotate(45deg) scale(0.82); } .ds-waiting::before { background: #6b5a8e; border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); } .ds-todo::before { border: 1.5px solid #7d8e98; } .ds-hold { color: #3f5561; font-weight: 400; } .ds-hold::before { border: 1.5px dashed #7d8e98; border-radius: 1px; }"
+    },
+    {
+      "name": "Board Sheet with Table",
+      "kind": "card",
+      "refersTo": "board",
+      "description": "Near-white sheet with a 2px dark top rule and a fixed-column table; the overdue row is tinted and its date is magenta bold.",
+      "html": "<section class=\"ds-board\"><h2 class=\"ds-title\">Sheet title</h2><table class=\"ds-table\"><colgroup><col><col style=\"width:7rem\"></colgroup><tr><th>Item</th><th>Due</th></tr><tr class=\"ds-overdue\"><td>ABC-12 Example task</td><td class=\"ds-late\">2025-01-03</td></tr><tr><td>ABC-14 Another task</td><td>2025-02-10</td></tr></table></section>",
+      "css": ".ds-board { background: #fbfcfc; border: 1px solid #ccd7dd; border-top: 2px solid #3b5565; border-radius: 0 0 3px 3px; padding: 1rem 1.5rem 1.5rem; color: #1f3340; font-size: 0.875rem; } .ds-title { margin: 0 0 0.25rem; font-size: 1.1875rem; font-weight: 700; line-height: 1.35; } .ds-table { width: 100%; table-layout: fixed; border-collapse: collapse; } .ds-table th { text-align: left; padding: 0.25rem 0.75rem; color: #3f5561; font-size: 0.75rem; font-weight: 600; border-bottom: 1.5px solid #3b5565; } .ds-table td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; border-bottom: 1px solid #ccd7dd; font-variant-numeric: tabular-nums; } .ds-table tr:hover > td { background: #e8eff2; } .ds-table tr.ds-overdue > td { background: #f8e5ed; } .ds-late { color: #ad1259; font-weight: 700; }"
+    },
+    {
+      "name": "Gantt Chart Border",
+      "kind": "custom",
+      "description": "Three-segment graticule axis, hairline bearing line for today, solid and dashed-outline bars.",
+      "html": "<div class=\"ds-gantt\"><div class=\"ds-axis\"><span class=\"ds-s\">Mon</span><span class=\"ds-e\">+3w</span></div><div class=\"ds-track\"><i class=\"ds-today\" style=\"left:40%\"></i><i class=\"ds-bar ds-done-bar\" style=\"left:5%;width:25%\"></i></div><div class=\"ds-track\"><i class=\"ds-today\" style=\"left:40%\"></i><i class=\"ds-bar ds-late-bar\" style=\"left:20%;width:30%\"></i></div><div class=\"ds-track\"><i class=\"ds-today\" style=\"left:40%\"></i><i class=\"ds-bar ds-open\" style=\"left:45%;width:40%\"></i></div></div>",
+      "css": ".ds-gantt { width: 280px; font-size: 0.75rem; color: #3f5561; } .ds-axis { position: relative; height: 1.1em; padding-bottom: 11px; box-sizing: content-box; margin-bottom: 0.75rem; } .ds-axis::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid #3b5565; background: linear-gradient(90deg, #3b5565 33.333%, #fbfcfc 33.333% 66.666%, #3b5565 66.666%); } .ds-s { position: absolute; left: 0; } .ds-e { position: absolute; right: 0; } .ds-track { position: relative; height: 14px; margin-bottom: 0.3rem; background-color: #eff3f5; background-image: linear-gradient(#ccd7dd, #ccd7dd), linear-gradient(#ccd7dd, #ccd7dd); background-size: 1px 100%; background-repeat: no-repeat; background-position: 33.333% 0, 66.666% 0; } .ds-today { position: absolute; top: -2px; bottom: -2px; width: 1px; background: #1f3340; z-index: 1; } .ds-bar { position: absolute; top: 2px; height: 10px; border-radius: 1px; min-width: 6px; } .ds-done-bar { background: #2f6e57; } .ds-late-bar { background: #ad1259; } .ds-open { background: transparent; border: 1px dashed #586f7c; box-sizing: border-box; }"
+    },
+    {
+      "name": "Stat Strip",
+      "kind": "custom",
+      "description": "Counts as small figures in a ruled strip, with the alert count in magenta.",
+      "html": "<div class=\"ds-stats\"><span class=\"ds-stat\"><b>12</b> open</span><span class=\"ds-stat\"><b>5</b> done</span><span class=\"ds-stat ds-alert\"><b>2</b> overdue</span></div>",
+      "css": ".ds-stats { display: flex; flex-wrap: wrap; border-top: 1px solid #ccd7dd; border-bottom: 1px solid #ccd7dd; font-variant-numeric: tabular-nums; } .ds-stat { padding: 0.5rem 1rem 0.5rem 0; margin-right: 1rem; font-size: 0.8125rem; color: #3f5561; border-right: 1px solid #ccd7dd; } .ds-stat:last-child { border-right: none; margin-right: 0; } .ds-stat b { color: #1f3340; font-size: 1rem; font-weight: 700; } .ds-alert, .ds-alert b { color: #ad1259; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Admiralty Chart",
+    "overview": "A weekly review is a passage plan, not a dashboard: every row is a position to check against hazards and dates. A deep chart-navy band carries brand and navigation. The working ground is a pale sea tint, with near-white sheets laid on it, hairline ink rules, and 2-3px corners. There are no shadows and no big-number tiles. Ink is blue-black. Numerals are tabular and small. The page lets one colour mean one thing: magenta is reserved for work that is overdue or needs attention now. Everything else is quiet: chart blue for structure and anything clickable, amber for work under way, sea green for done.",
+    "keyCharacteristics": [
+      "Chart-blue shell band, pale sea ground, near-white sheets with a 2px dark top rule.",
+      "One loud colour, one meaning (magenta = overdue / needs attention now).",
+      "Status is a small CSS-drawn chart symbol plus plain text, never a coloured block.",
+      "Fixed column grid: the same column has the same width in every table.",
+      "Flat: depth comes from tone, hairlines and the dark top rule, never from shadow.",
+      "Gantt drawn as chart furniture: graticule scale, bearing line, dashed open-ended work."
+    ],
+    "rules": [
+      { "name": "The One Meaning Rule", "body": "Magenta means overdue or needs attention now, and nothing else. Never use it for brand, decoration, emphasis, categories or \"important\" in general.", "section": "colors" },
+      { "name": "The Symbol-Not-Block Rule", "body": "Status colours appear only inside the small status symbol or a gantt bar; they never fill a cell, chip or card.", "section": "colors" },
+      { "name": "The Quiet Majority Rule", "body": "If every row in a group is flagged, the tint says nothing. Such tables get all-flagged and drop the row tint; the date stays magenta and bold.", "section": "colors" },
+      { "name": "The Atomic Value Rule", "body": "Dates, keys, statuses and names are white-space: nowrap and never break mid-value. Only the item column wraps.", "section": "typography" },
+      { "name": "The No-Shadow Rule", "body": "Separate things with a hairline or a tonal step, not a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use magenta (hazard-magenta) only for overdue or needs-attention-now.",
+      "Do use chart blue for links, keys and structure; amber for work under way; sea green for done.",
+      "Do show status as the CSS-drawn symbol plus plain text.",
+      "Do give new tables a <colgroup> and table-layout: fixed, reusing existing column widths.",
+      "Do add all-flagged when every row in a group would be overdue or scheduled.",
+      "Do keep row-overdue / row-scheduled classes on rows; tests assert them.",
+      "Do add data-label to date cells so they read in the stacked mobile card.",
+      "Do route new colours through custom properties in base.html.",
+      "Do keep icons on the icon macro: 20-unit grid, 1.6 stroke."
+    ],
+    "donts": [
+      "Don't use magenta for brand, decoration or generic emphasis.",
+      "Don't fill a cell, chip or card with a status colour.",
+      "Don't add shadows, big-number metric tiles or saturated colour-block cards.",
+      "Don't add web fonts or image/icon files; there is no static mount, so type is the system stack and icons are inline SVG.",
+      "Don't let dates, keys, statuses or names wrap mid-value.",
+      "Don't draw open-ended work as a filled bar.",
+      "Don't put person names, emails, company domains or Jira site URLs into any committed file."
+    ]
+  }
+}

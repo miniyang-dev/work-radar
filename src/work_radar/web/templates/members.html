@@ -10,16 +10,18 @@
   </form>
 
   {% if candidates is defined %}
-  <div style="margin-top: 1rem;">
+  <div class="candidate-results">
     {% if candidates %}
     <div class="member-grid">
       {% for candidate in candidates %}
       <div class="member-card">
-        <div class="person-cell">
-          <span class="avatar" style="background: {{ candidate.avatar.color }};">{{ candidate.avatar.initials }}</span>
-          <span class="name" style="font-weight: 700;">{{ candidate.display_name }}</span>
+        <div class="who">
+          <div class="person-cell">
+            <span class="avatar" style="background: {{ candidate.avatar.color }};">{{ candidate.avatar.initials }}</span>
+            <span class="name">{{ candidate.display_name }}</span>
+          </div>
+          {% if candidate.email %}<span class="email">{{ candidate.email }}</span>{% endif %}
         </div>
-        {% if candidate.email %}<div class="board-subtitle" style="margin: 0.3rem 0 0;">{{ candidate.email }}</div>{% endif %}
         <form method="post" action="/members/add">
           <input type="hidden" name="account_id" value="{{ candidate.account_id }}">
           <input type="hidden" name="display_name" value="{{ candidate.display_name }}">
@@ -42,14 +44,16 @@
   <div class="member-grid">
     {% for member in members %}
     <div class="member-card">
-      <div class="person-cell">
-        <span class="avatar" style="background: {{ member.avatar.color }};">{{ member.avatar.initials }}</span>
-        <span class="name" style="font-weight: 700;">{{ member.display_name }}</span>
+      <div class="who">
+        <div class="person-cell">
+          <span class="avatar" style="background: {{ member.avatar.color }};">{{ member.avatar.initials }}</span>
+          <span class="name">{{ member.display_name }}</span>
+        </div>
+        {% if member.email %}<span class="email">{{ member.email }}</span>{% endif %}
       </div>
-      {% if member.email %}<div class="board-subtitle" style="margin: 0.3rem 0 0;">{{ member.email }}</div>{% endif %}
 
       <form method="post" action="/members/{{ member.account_id }}/rename">
-        <input type="text" name="display_name" value="{{ member.display_name }}">
+        <input type="text" name="display_name" value="{{ member.display_name }}" aria-label="姓名">
         <button type="submit" class="small">改名</button>
       </form>
       <form method="post" action="/members/{{ member.account_id }}/overview">

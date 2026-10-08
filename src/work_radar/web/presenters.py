@@ -49,21 +49,21 @@ _STATUS_CSS_CLASS = {
     StatusCategory.TODO: "status-todo",
 }
 
-# A monday.com-style board gives every person a stable colored avatar.
-# Plain string hashing isn't deterministic across process restarts
-# (PYTHONHASHSEED), so the palette index is derived from character codes
-# instead — same name always lands on the same color.
+# Every person gets a stable avatar colour. Plain string hashing isn't
+# deterministic across process restarts (PYTHONHASHSEED), so the palette
+# index is derived from character codes instead — same name always lands
+# on the same colour. The palette is deliberately dark and low-chroma: the
+# initials are white, and no avatar may out-shout a flagged row.
 _AVATAR_PALETTE = [
-    "#579bfc",  # blue
-    "#a25ddc",  # purple
-    "#037f4c",  # dark green
-    "#fdab3d",  # orange
-    "#e2445c",  # red
-    "#00c875",  # green
-    "#ff642e",  # deep orange
-    "#66ccff",  # light blue
-    "#9d99b9",  # muted purple
-    "#cab641",  # olive
+    "#2b5c82",  # chart blue
+    "#3f6e5a",  # sea green
+    "#7a4e7e",  # plum
+    "#8a5a2b",  # umber
+    "#4b5f7a",  # slate
+    "#2f6f73",  # teal
+    "#6b5a8e",  # violet
+    "#7b4a3f",  # sienna
+    "#55664a",  # olive
 ]
 
 
@@ -137,7 +137,7 @@ def epic_view(report: EpicReport) -> Dict[str, Any]:
     }
 
 
-_GROUP_ACCENT_PALETTE = ["#0073ea", "#a25ddc", "#00c875", "#fdab3d", "#e2445c", "#66ccff"]
+_GROUP_ACCENT_PALETTE = ["#2b5c82", "#7a4e7e", "#3f6e5a", "#8a5a2b", "#4b5f7a", "#2f6f73"]
 
 
 def unticketed_by_member(items: List[TrackingItem]) -> Dict[str, List[TrackingItem]]:

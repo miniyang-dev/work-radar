@@ -8,7 +8,7 @@
     <nav class="member-jump" aria-label="跳到成員">
       {% for report in reports %}
       <a href="#member-{{ report.person.account_id }}" class="member-chip">
-        <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 24px; height: 24px; font-size: 0.7rem;">{{ report.person.avatar.initials }}</span>
+        <span class="avatar" style="background: {{ report.person.avatar.color }};">{{ report.person.avatar.initials }}</span>
         {{ report.person.display_name }}
       </a>
       {% endfor %}
@@ -49,9 +49,9 @@
       {% for report in reports %}
       <div class="board" id="member-{{ report.person.account_id }}">
         <div class="member-header">
-          <div class="person-cell">
-            <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 36px; height: 36px; font-size: 0.85rem;">{{ report.person.avatar.initials }}</span>
-            <span class="board-title" style="margin: 0;">{{ report.person.display_name }}</span>
+          <div class="person-cell lg">
+            <span class="avatar lg" style="background: {{ report.person.avatar.color }};">{{ report.person.avatar.initials }}</span>
+            <span class="board-title">{{ report.person.display_name }}</span>
           </div>
           <button type="button" class="collapse-toggle" onclick="workRadarToggleMember(this)">收合</button>
         </div>
@@ -71,15 +71,15 @@
              lead it gets lost among 30 tickets. Hidden when empty — an
              exception block, not a standing section. #}
           {% if report.unticketed_count %}
-          {{ macros.tracking_group("重要但尚未開票", "#e2445c", report.unticketed_items) }}
+          {{ macros.tracking_group("重要但尚未開票", "#ad1259", report.unticketed_items) }}
           {% endif %}
 
           {# Outside the issue_count check below: someone can finish
              everything they had open and still deserve credit for it. #}
-          {{ macros.issue_group("本週已完成(依完成時間排序)", "#a25ddc", report.completed_issues, show_completed_at=True) }}
+          {{ macros.issue_group("本週已完成(依完成時間排序)", "#2f6e57", report.completed_issues, show_completed_at=True) }}
 
           {% if report.issue_count %}
-          {{ macros.issue_group("進行中(驗收中排最後,依到期日排序)", "#00c875", report.active_issues, show_due_date=True) }}
+          {{ macros.issue_group("進行中(驗收中排最後,依到期日排序)", "#1d5c88", report.active_issues, show_due_date=True) }}
 
           {% if report.backlog_groups_by_project %}
           <details class="backlog-section">
@@ -109,7 +109,7 @@
           <li><i class="swatch due_soon"></i>進行中</li>
           <li><i class="swatch overdue"></i>已逾期</li>
           <li><i class="swatch open_ended"></i>無到期日</li>
-          <li><i class="swatch beyond">→</i>到期日超過兩週</li>
+          <li><i class="swatch beyond"></i>到期日超過兩週</li>
         </ul>
 
         {% if gantt.groups %}
@@ -124,7 +124,7 @@
           {% for group in gantt.groups %}
           <div class="gantt-group">
             <div class="gantt-group-title">
-              <span class="avatar" style="background: {{ group.avatar.color }}; width: 20px; height: 20px; font-size: 0.7rem;">{{ group.avatar.initials }}</span>
+              <span class="avatar sm" style="background: {{ group.avatar.color }};">{{ group.avatar.initials }}</span>
               {{ group.member }}
             </div>
             {% for row in group.rows %}

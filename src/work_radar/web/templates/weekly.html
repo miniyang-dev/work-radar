@@ -13,15 +13,15 @@
 
 {% if report %}
 <div class="board">
-  <div class="person-cell" style="margin-bottom: 0.5rem;">
-    <span class="avatar" style="background: {{ report.person.avatar.color }}; width: 36px; height: 36px; font-size: 0.85rem;">{{ report.person.avatar.initials }}</span>
-    <span class="board-title" style="margin: 0;">{{ report.person.display_name }}</span>
+  <div class="person-cell lg">
+    <span class="avatar lg" style="background: {{ report.person.avatar.color }};">{{ report.person.avatar.initials }}</span>
+    <span class="board-title">{{ report.person.display_name }}</span>
   </div>
   <div class="board-subtitle">最近 {{ report.window_days }} 天</div>
 
-  {{ macros.issue_group("完成", "#00c875", report.completed) }}
-  {{ macros.issue_group("進行中", "#0073ea", report.in_progress) }}
-  {{ macros.issue_group("待處理", "#e2445c", report.stuck) }}
+  {{ macros.issue_group("完成", "#2f6e57", report.completed) }}
+  {{ macros.issue_group("進行中", "#1d5c88", report.in_progress) }}
+  {{ macros.issue_group("待處理", "#8a5a2b", report.stuck) }}
 </div>
 {% endif %}
 {% endblock %}

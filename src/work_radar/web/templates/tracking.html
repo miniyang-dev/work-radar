@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block title %}追蹤事項 - work-radar{% endblock %}
 
 {# Macros don't see the template context, so every option list has to be
@@ -62,6 +63,15 @@
 {% macro tracking_rows(items, status_options, priority_options) %}
 <div class="table-scroll">
   <table class="board-table">
+    <colgroup>
+      <col>
+      <col style="width: 10rem">
+      <col style="width: 10.5rem">
+      <col style="width: 5.5rem">
+      <col style="width: 9.5rem">
+      <col style="width: 9.5rem">
+      <col style="width: 14rem">
+    </colgroup>
     <thead>
       <tr>
         <th>工作項目</th>
@@ -78,12 +88,12 @@
       <tr>
         <td class="item-cell">
           {% if row.link %}
-          <a class="item-link" href="{{ row.link }}" target="_blank" rel="noopener noreferrer">{{ row.item }} 🔗</a>
+          <a class="item-link" href="{{ row.link }}" target="_blank" rel="noopener noreferrer">{{ row.item }}{{ macros.icon('link') }}</a>
           {% else %}
           {{ row.item }}
           {% endif %}
           {% if row.member_name %}
-          <span class="routed-pill" title="也顯示在 {{ row.member_name }} 的個人工作量">▸ 個人工作量:{{ row.member_name }}</span>
+          <span class="routed-pill" title="也顯示在 {{ row.member_name }} 的個人工作量">個人工作量:{{ row.member_name }}</span>
           {% endif %}
           {% for note in row.notes %}
           <span class="item-note"><span class="note-time">{{ note.created_at }}</span>{% for part in note.segments %}{% if part.url %}<a class="note-link" href="{{ part.url }}" target="_blank" rel="noopener noreferrer" title="{{ part.url }}">{{ part.text }}</a>{% else %}{{ part.text }}{% endif %}{% endfor %}</span>
@@ -101,10 +111,10 @@
         </td>
         <td><span class="status-pill {{ row.status_css }}">{{ row.status_label }}</span></td>
         <td><span class="priority-tag {{ row.priority_css }}">{{ row.priority_label }}</span></td>
-        <td class="{{ 'overdue-text' if row.is_overdue }}">
+        <td class="{{ 'overdue-text' if row.is_overdue }}" data-label="追蹤日期">
           {% if row.due_date %}{{ row.due_date }}{% if row.is_overdue %} (已逾期){% endif %}{% else %}—{% endif %}
         </td>
-        <td>{{ row.updated_at }}</td>
+        <td data-label="最後更新">{{ row.updated_at }}</td>
         <td>
           <div class="tracking-actions">
             {# Reopening lands on 待處理 rather than whatever it was before
@@ -114,10 +124,10 @@
             <form method="post" action="/tracking/{{ row.id }}/status">
               {% if row.is_active %}
               <input type="hidden" name="status" value="done">
-              <button type="submit" class="small">✓ 完成</button>
+              <button type="submit" class="small">{{ macros.icon('check') }} 完成</button>
               {% else %}
               <input type="hidden" name="status" value="todo">
-              <button type="submit" class="small">↩ 重新追蹤</button>
+              <button type="submit" class="small">{{ macros.icon('undo') }} 重新追蹤</button>
               {% endif %}
             </form>
             <button type="button" class="collapse-toggle" onclick="workRadarToggleTrackingEdit(this)">編輯</button>

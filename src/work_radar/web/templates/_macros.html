@@ -1,24 +1,76 @@
+{# One stroke weight, one grid: every icon is drawn on a 20-unit square and
+   inherits colour from the text around it. #}
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 20 20" aria-hidden="true">
+{%- if name == 'comment' %}<path d="M3.5 4.5h13v8.5h-6l-3.5 3v-3h-3.5z"/>
+{%- elif name == 'link' %}<path d="M8 4.5H4.5v11h11V12"/><path d="M11.5 4.5h4v4"/><path d="M15.5 4.5 9.5 10.5"/>
+{%- elif name == 'check' %}<path d="M4.5 10.5l3.5 3.5 7.5-8"/>
+{%- elif name == 'undo' %}<path d="M7.5 6.5H13a3.5 3.5 0 0 1 0 7H6"/><path d="M9.5 3.5l-3 3 3 3"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro comments_button(key) -%}
+<button type="button" class="comments-toggle" data-issue-key="{{ key }}" aria-expanded="false" onclick="workRadarToggleComments(this)">{{ icon('comment') }}<span class="label">留言</span></button>
+{%- endmacro %}
+
 {% macro member_picker(members, account_id) %}
 {% if members %}
-<select name="account_id" onchange="this.form.requestSubmit()">
+<select name="account_id" aria-label="從成員名單選擇" onchange="this.form.requestSubmit()">
   <option value="">— 從成員名單選擇 —</option>
   {% for member in members %}
   <option value="{{ member.account_id }}" {{ 'selected' if member.account_id == account_id else '' }}>{{ member.display_name }}</option>
   {% endfor %}
 </select>
-<div class="board-subtitle" style="flex-basis: 100%; margin: 0.4rem 0 0;">名單裡沒有這個人?<a href="/members">先加入成員名單</a>,或用姓名搜尋:</div>
+<div class="board-subtitle form-note">名單裡沒有這個人?<a href="/members">先加入成員名單</a>,或用姓名搜尋:</div>
 {% endif %}
+{% endmacro %}
+
+{% macro assignee_cell(issue) %}
+{% if issue.assignee_avatar %}
+<span class="person-cell">
+  <span class="avatar" style="background: {{ issue.assignee_avatar.color }};">{{ issue.assignee_avatar.initials }}</span>
+  <span class="name">{{ issue.assignee }}</span>
+</span>
+{% else %}
+<span class="unassigned-pill">未認領</span>
+{% endif %}
+{% endmacro %}
+
+{% macro item_cell(issue) %}
+<td class="item-cell">
+  <a class="item-link" href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">
+    <span class="key">{{ issue.key }}</span> {{ issue.summary }}
+  </a>
+  {% if issue.parent_key %}
+  <span class="item-parent">parent: <a href="{{ issue.parent_url }}" target="_blank" rel="noopener noreferrer">{{ issue.parent_key }}</a> {{ issue.parent_summary }}</span>
+  {% endif %}
+  {{ comments_button(issue.key) }}
+</td>
 {% endmacro %}
 
 {% macro issue_group(title, accent, issues, show_due_date=False, highlight_due_date=False, show_completed_at=False) %}
 {# Counted once here rather than re-derived in the comments row's colspan:
    two optional columns is where inline arithmetic starts going wrong. #}
 {% set column_count = 5 + (1 if show_due_date else 0) + (1 if show_completed_at else 0) %}
+{# A group that is flagged top to bottom drops its row tint (see base.html). #}
+{% set all_flagged = highlight_due_date and issues and (issues|selectattr('due_row_css', 'in', ['row-overdue', 'row-scheduled'])|list|length == issues|length) %}
 <div class="group" style="--accent: {{ accent }};">
   <div class="group-title">{{ title }}（{{ issues|length }}）</div>
   {% if issues %}
   <div class="table-scroll">
-  <table class="board-table">
+  <table class="board-table{{ ' all-flagged' if all_flagged }}">
+    {# The same column always gets the same width, so figures line up from
+       one table to the next down the page. #}
+    <colgroup>
+      <col>
+      <col style="width: 10rem">
+      <col style="width: 10.5rem">
+      <col style="width: 5.5rem">
+      {% if show_due_date %}<col style="width: 7rem">{% endif %}
+      {% if show_completed_at %}<col style="width: 9.5rem">{% endif %}
+      <col style="width: 9.5rem">
+    </colgroup>
     <tr>
       <th>項目</th>
       <th>負責人</th>
@@ -31,32 +83,15 @@
     {% for issue in issues %}
     {% set due_row_css = issue.due_row_css if highlight_due_date else '' %}
     <tr class="{{ due_row_css }}">
-      <td class="item-cell">
-        <a class="item-link" href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">
-          <span class="key">{{ issue.key }}</span> {{ issue.summary }}
-        </a>
-        {% if issue.parent_key %}
-        <span class="item-parent">parent: <a href="{{ issue.parent_url }}" target="_blank" rel="noopener noreferrer">{{ issue.parent_key }}</a> {{ issue.parent_summary }}</span>
-        {% endif %}
-        <button type="button" class="comments-toggle" data-issue-key="{{ issue.key }}" onclick="workRadarToggleComments(this)">💬 留言</button>
-      </td>
-      <td>
-        {% if issue.assignee_avatar %}
-        <span class="person-cell">
-          <span class="avatar" style="background: {{ issue.assignee_avatar.color }};">{{ issue.assignee_avatar.initials }}</span>
-          <span class="name">{{ issue.assignee }}</span>
-        </span>
-        {% else %}
-        <span class="unassigned-pill">未認領</span>
-        {% endif %}
-      </td>
+      {{ item_cell(issue) }}
+      <td>{{ assignee_cell(issue) }}</td>
       <td><span class="status-pill {{ issue.status_css }}">{{ issue.status }}</span></td>
       <td><span class="priority-tag">{{ issue.priority }}</span></td>
       {% if show_due_date %}
-      <td class="{{ issue.due_date_css if highlight_due_date else '' }}">{{ issue.due_date or '—' }}</td>
+      <td class="{{ issue.due_date_css if highlight_due_date else '' }}" data-label="到期日">{{ issue.due_date or '—' }}</td>
       {% endif %}
-      {% if show_completed_at %}<td>{{ issue.completed_at or '—' }}</td>{% endif %}
-      <td>{{ issue.updated_at }}</td>
+      {% if show_completed_at %}<td data-label="完成時間">{{ issue.completed_at or '—' }}</td>{% endif %}
+      <td data-label="更新時間">{{ issue.updated_at }}</td>
     </tr>
     <tr class="comments-row {{ due_row_css }}" hidden>
       <td colspan="{{ column_count }}"><div class="comments-container"></div></td>
@@ -77,6 +112,16 @@
 {% macro audit_table(rows) %}
 <div class="table-scroll">
 <table class="board-table">
+  <colgroup>
+    <col style="width: 9.5rem">
+    <col>
+    <col style="width: 10rem">
+    <col style="width: 10.5rem">
+    <col style="width: 5.5rem">
+    <col style="width: 7rem">
+    <col style="width: 7rem">
+    <col style="width: 5rem">
+  </colgroup>
   <tr>
     <th>緊急度</th>
     <th>項目</th>
@@ -93,30 +138,13 @@
       <span class="urgency-tag {{ issue.urgency_css }}">{{ issue.urgency_label }}</span>
       <span class="urgency-why">{{ issue.urgency_reasons }}</span>
     </td>
-    <td class="item-cell">
-      <a class="item-link" href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">
-        <span class="key">{{ issue.key }}</span> {{ issue.summary }}
-      </a>
-      {% if issue.parent_key %}
-      <span class="item-parent">parent: <a href="{{ issue.parent_url }}" target="_blank" rel="noopener noreferrer">{{ issue.parent_key }}</a> {{ issue.parent_summary }}</span>
-      {% endif %}
-      <button type="button" class="comments-toggle" data-issue-key="{{ issue.key }}" onclick="workRadarToggleComments(this)">💬 留言</button>
-    </td>
-    <td>
-      {% if issue.assignee_avatar %}
-      <span class="person-cell">
-        <span class="avatar" style="background: {{ issue.assignee_avatar.color }};">{{ issue.assignee_avatar.initials }}</span>
-        <span class="name">{{ issue.assignee }}</span>
-      </span>
-      {% else %}
-      <span class="unassigned-pill">未認領</span>
-      {% endif %}
-    </td>
+    {{ item_cell(issue) }}
+    <td>{{ assignee_cell(issue) }}</td>
     <td><span class="status-pill {{ issue.status_css }}">{{ issue.status }}</span></td>
     <td><span class="priority-tag">{{ issue.priority }}</span></td>
-    <td>{{ issue.created_at }}</td>
-    <td class="{{ 'overdue-text' if issue.is_overdue else '' }}">{{ issue.due_date or '—' }}</td>
-    <td>{{ issue.stale_days }} 天</td>
+    <td data-label="建立日">{{ issue.created_at }}</td>
+    <td class="{{ 'overdue-text' if issue.is_overdue else '' }}" data-label="到期日">{{ issue.due_date or '—' }}</td>
+    <td data-label="未更新">{{ issue.stale_days }} 天</td>
   </tr>
   <tr class="comments-row" hidden>
     <td colspan="8"><div class="comments-container"></div></td>
@@ -134,6 +162,13 @@
   <div class="group-title">{{ title }}（{{ rows|length }}）</div>
   <div class="table-scroll">
   <table class="board-table">
+    <colgroup>
+      <col>
+      <col style="width: 10.5rem">
+      <col style="width: 5.5rem">
+      <col style="width: 9.5rem">
+      <col style="width: 9.5rem">
+    </colgroup>
     <tr>
       <th>工作項目</th>
       <th>狀態</th>
@@ -145,7 +180,7 @@
     <tr class="{{ 'row-overdue' if row.is_overdue }}">
       <td class="item-cell">
         {% if row.link %}
-        <a class="item-link" href="{{ row.link }}" target="_blank" rel="noopener noreferrer">{{ row.item }} 🔗</a>
+        <a class="item-link" href="{{ row.link }}" target="_blank" rel="noopener noreferrer">{{ row.item }}{{ icon('link') }}</a>
         {% else %}
         {{ row.item }}
         {% endif %}
@@ -156,14 +191,14 @@
       </td>
       <td><span class="status-pill {{ row.status_css }}">{{ row.status_label }}</span></td>
       <td><span class="priority-tag {{ row.priority_css }}">{{ row.priority_label }}</span></td>
-      <td class="{{ 'overdue-text' if row.is_overdue }}">
+      <td class="{{ 'overdue-text' if row.is_overdue }}" data-label="追蹤日期">
         {% if row.due_date %}{{ row.due_date }}{% if row.is_overdue %} (已逾期){% endif %}{% else %}—{% endif %}
       </td>
-      <td>{{ row.updated_at }}</td>
+      <td data-label="最後更新">{{ row.updated_at }}</td>
     </tr>
     {% endfor %}
   </table>
   </div>
-  <p class="board-subtitle" style="margin: 0.4rem 0 0;">來自<a href="/tracking">追蹤事項</a>,還沒開成 Jira 票。</p>
+  <p class="board-subtitle group-note">來自<a href="/tracking">追蹤事項</a>,還沒開成 Jira 票。</p>
 </div>
 {% endmacro %}
